@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/videa-tv/grpc-client-cli/internal/services"
+	"github.com/vadimi/grpc-client-cli/internal/services"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/jhump/protoreflect/desc"

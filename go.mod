@@ -1,4 +1,4 @@
-module github.com/videa-tv/grpc-client-cli
+module github.com/vadimi/grpc-client-cli
 
 require (
 	github.com/golang/protobuf v1.3.2
