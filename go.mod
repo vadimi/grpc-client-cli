@@ -1,6 +1,7 @@
 module github.com/vadimi/grpc-client-cli
 
 require (
+	github.com/ArthurHlt/go-eureka-client v1.1.0
 	github.com/golang/protobuf v1.3.2
 	github.com/jhump/protoreflect v1.6.0
 	github.com/peterh/liner v1.1.0

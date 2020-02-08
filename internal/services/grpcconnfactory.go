@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 
+	"github.com/vadimi/grpc-client-cli/internal/services/eureka"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer/roundrobin"
 	_ "google.golang.org/grpc/encoding/gzip" // register gzip compressor
@@ -17,6 +18,7 @@ import (
 func init() {
 	// TODO: remove that line when dns is default resolver
 	resolver.SetDefaultScheme("dns")
+	resolver.Register(eureka.NewEurekaBuilder())
 }
 
 type connMeta struct {
