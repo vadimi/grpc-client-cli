@@ -21,6 +21,7 @@ package eureka
 
 import (
 	"log"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -40,21 +41,22 @@ func (b *eurekaBuilder) Build(target resolver.Target, cc resolver.ClientConn, op
 
 	eurekaServer := target.Authority
 	serviceName := target.Endpoint
+	eurekaPath := ""
 
 	if len(serviceName) == 0 {
 		serviceName = eurekaServer
-		eurekaServer = "localhost:8761/eureka"
+		eurekaServer = "localhost:8761"
+		eurekaPath = "eureka"
 	}
 
 	serviceNameIndex := strings.LastIndex(serviceName, "/")
 
 	if serviceNameIndex != -1 {
-		eurekaServerPath := serviceName[0:serviceNameIndex]
+		eurekaPath = serviceName[0:serviceNameIndex]
 		serviceName = serviceName[serviceNameIndex+1:]
-		eurekaServer = eurekaServer + "/" + eurekaServerPath
 	}
 
-	d := &eurekaResolver{EurekaServer: eurekaServer, ServiceName: serviceName, ClientConn: cc}
+	d := &eurekaResolver{EurekaServer: eurekaServer, EurekaPath: eurekaPath, ServiceName: serviceName, ClientConn: cc}
 
 	d.ResolveNow(resolver.ResolveNowOptions{})
 
@@ -68,14 +70,18 @@ func (b *eurekaBuilder) Scheme() string {
 
 type eurekaResolver struct {
 	EurekaServer string
+	EurekaPath   string
 	ServiceName  string
 	ClientConn   resolver.ClientConn
 }
 
 // ResolveNow invoke an immediate resolution of the target that this dnsResolver watches.
 func (d *eurekaResolver) ResolveNow(resolver.ResolveNowOptions) {
+
+	eurekaURL := url.URL{Scheme: "http", Host: d.EurekaServer, Path: d.EurekaPath}
+
 	eurekaClient := ec.NewClient([]string{
-		"http://" + d.EurekaServer,
+		eurekaURL.String(),
 	})
 
 	application, err := eurekaClient.GetApplication(d.ServiceName)
