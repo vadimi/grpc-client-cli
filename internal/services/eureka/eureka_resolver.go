@@ -22,6 +22,7 @@ package eureka
 import (
 	"log"
 	"strconv"
+	"strings"
 
 	ec "github.com/ArthurHlt/go-eureka-client/eureka"
 	"google.golang.org/grpc/resolver"
@@ -37,7 +38,23 @@ type eurekaBuilder struct{}
 // Build creates and starts a DNS resolver that watches the name resolution of the target.
 func (b *eurekaBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
 
-	d := &eurekaResolver{EurekaResolver: target.Authority, ServiceName: target.Endpoint, ClientConn: cc}
+	eurekaServer := target.Authority
+	serviceName := target.Endpoint
+
+	if len(serviceName) == 0 {
+		serviceName = eurekaServer
+		eurekaServer = "localhost:8761/eureka"
+	}
+
+	serviceNameIndex := strings.LastIndex(serviceName, "/")
+
+	if serviceNameIndex != -1 {
+		eurekaServerPath := serviceName[0:serviceNameIndex]
+		serviceName = serviceName[serviceNameIndex+1:]
+		eurekaServer = eurekaServer + "/" + eurekaServerPath
+	}
+
+	d := &eurekaResolver{EurekaServer: eurekaServer, ServiceName: serviceName, ClientConn: cc}
 
 	d.ResolveNow(resolver.ResolveNowOptions{})
 
@@ -50,15 +67,15 @@ func (b *eurekaBuilder) Scheme() string {
 }
 
 type eurekaResolver struct {
-	EurekaResolver string
-	ServiceName    string
-	ClientConn     resolver.ClientConn
+	EurekaServer string
+	ServiceName  string
+	ClientConn   resolver.ClientConn
 }
 
 // ResolveNow invoke an immediate resolution of the target that this dnsResolver watches.
 func (d *eurekaResolver) ResolveNow(resolver.ResolveNowOptions) {
 	eurekaClient := ec.NewClient([]string{
-		"http://" + d.EurekaResolver + "/eureka",
+		"http://" + d.EurekaServer,
 	})
 
 	application, err := eurekaClient.GetApplication(d.ServiceName)
