@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 
-	"github.com/vadimi/grpc-client-cli/internal/services/eureka"
+	"github.com/vadimi/grpc-client-cli/internal/resolver/eureka"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer/roundrobin"
 	_ "google.golang.org/grpc/encoding/gzip" // register gzip compressor

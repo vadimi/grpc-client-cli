@@ -87,7 +87,7 @@ func (d *eurekaResolver) ResolveNow(resolver.ResolveNowOptions) {
 	application, err := eurekaClient.GetApplication(d.ServiceName)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Application cannot %v be found in Eureka instance %v: %v", d.ServiceName, eurekaURL.String(), err)
 	}
 
 	var newAddrs []resolver.Address = make([]resolver.Address, 0, len(application.Instances))
@@ -95,6 +95,10 @@ func (d *eurekaResolver) ResolveNow(resolver.ResolveNowOptions) {
 	for _, instance := range application.Instances {
 		addr := instance.IpAddr + ":" + strconv.Itoa(application.Instances[0].Port.Port)
 		newAddrs = append(newAddrs, resolver.Address{Addr: addr})
+	}
+
+	if len(newAddrs) == 0 {
+		log.Fatal("No address for application")
 	}
 
 	state := &resolver.State{
