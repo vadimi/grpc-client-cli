@@ -6,7 +6,6 @@ jobs:
     steps:
       - run: go get -u github.com/mitchellh/gox
       - checkout
-      - run: go build -v ./cmd/grpc-client-cli
       - run:
           name: cross compile
           command: |
