@@ -8,9 +8,9 @@ jobs:
       - checkout
       - run: go build -v ./cmd/grpc-client-cli
       - run:
-        name: cross compile
-        command: |
-          gox -os="linux darwin windows" -arch="amd64" -output="./dist/grpc-client-cli_{{.OS}}_{{.Arch}}" ./cmd/grpc-client-cli
+          name: cross compile
+          command: |
+            gox -os="linux darwin windows" -arch="amd64" -output="./dist/grpc-client-cli_{{.OS}}_{{.Arch}}" ./cmd/grpc-client-cli
       - run: go test -v ./...
       - persist_to_workspace:
           root: .
