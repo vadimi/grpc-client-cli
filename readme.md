@@ -17,7 +17,7 @@ grpc-client-cli localhost:5050,authority=localhost:9090
 ```
 
 ### Subcommands
-**discover** - print servive proto contract
+**discover** - print service proto contract
 
 ```
 grpc-client-cli discover localhost:5050
@@ -61,7 +61,7 @@ Most of the fields in proto message can be intuitively mapped to `json` types. T
 1. `Timestamp` mapped to a string in `ISO 8601` format.
 
 For example:
-```
+```json
 {
   "flight_start_date": "2018-03-19T00:00:00.0Z"
 }
@@ -70,7 +70,7 @@ For example:
 2. `Duration` mapped to a string in the following format: `00h00m00s`
 
 For example:
-```
+```json
 {
   "start_time": "20h00m00s",
   "some_other_duration": "1s"
