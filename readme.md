@@ -4,7 +4,7 @@
 At this point only `json` formatted requests are supported.
 
 ## Usage
-Just specify a connection string to a servce in ~host:port~ format and follow instructions to select service, method and enter request message in `json` format.
+Just specify a connection string to a servce in `host:port` format and follow instructions to select service, method and enter request message in `json` format.
 
 `grpc-client-cli localhost:4400`
 
