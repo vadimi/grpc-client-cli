@@ -56,6 +56,12 @@ func (b *eurekaBuilder) Build(target resolver.Target, cc resolver.ClientConn, op
 		serviceName = serviceName[serviceNameIndex+1:]
 	}
 
+	portSeparatorIndex := strings.LastIndex(eurekaServer,":")
+
+	if portSeparatorIndex == -1 {
+		eurekaServer = eurekaServer + ":8761"
+	}
+
 	d := &eurekaResolver{EurekaServer: eurekaServer, EurekaPath: eurekaPath, ServiceName: serviceName, ClientConn: cc}
 
 	d.ResolveNow(resolver.ResolveNowOptions{})
@@ -63,7 +69,7 @@ func (b *eurekaBuilder) Build(target resolver.Target, cc resolver.ClientConn, op
 	return d, nil
 }
 
-// Scheme returns the naming scheme of this resolver builder, which is "dns".
+// Scheme returns the naming scheme of this resolver builder, which is "eureka".
 func (b *eurekaBuilder) Scheme() string {
 	return "eureka"
 }
