@@ -56,7 +56,7 @@ func (b *eurekaBuilder) Build(target resolver.Target, cc resolver.ClientConn, op
 		serviceName = serviceName[serviceNameIndex+1:]
 	}
 
-	portSeparatorIndex := strings.LastIndex(eurekaServer,":")
+	portSeparatorIndex := strings.LastIndex(eurekaServer, ":")
 
 	if portSeparatorIndex == -1 {
 		eurekaServer = eurekaServer + ":8761"
