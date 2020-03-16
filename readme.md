@@ -3,6 +3,8 @@
 
 At this point only `json` formatted requests are supported.
 
+![](images/demo.gif)
+
 ## Usage
 Just specify a connection string to a servce in `host:port` format and follow instructions to select service, method and enter request message in `json` format.
 
