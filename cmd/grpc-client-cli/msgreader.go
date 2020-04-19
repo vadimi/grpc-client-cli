@@ -32,6 +32,7 @@ func newMsgReader(settings *msgReaderSettings) (*msgReader, error) {
 	}
 
 	r.line.SetCtrlCAborts(true)
+	r.line.SetBeep(false)
 
 	if r.settings.HistoryFile != "" {
 		if err := r.readHistory(); err != nil {
