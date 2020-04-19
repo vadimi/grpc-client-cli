@@ -1,7 +1,7 @@
 # Description
 `grpc-client-cli` is a generic `gRPC` command line client. You can call any `gRPC` service that exposes reflection endpoint.
 
-At this point only `json` formatted requests are supported.
+At this time only `json` formatted requests are supported.
 
 ![](images/demo.gif)
 
@@ -56,6 +56,27 @@ Another option of providing a file with message json is `-input` (or `-i`) param
 ```
 grpc-client-cli -service UserService -method GetUser -i message.json localhost:5050
 ```
+
+### Autocompletion
+To enable autocompletion add the following commands. In order to make completion persitent add these commands to you `.bashrc` or `.zshrc` files.
+
+**ZSH**
+
+```
+PROG=grpc-client-cli
+_CLI_ZSH_AUTOCOMPLETE_HACK=1
+source  autocomplete/zsh_autocomplete
+```
+
+**Bash**
+
+```
+PROG=grpc-client-cli
+source autocomplete/bash_autocomplete
+```
+
+`autocomplete` directory is located in the root of the repo. Please find more details [here](https://github.com/urfave/cli/blob/master/docs/v2/manual.md#bash-completion).
+
 
 ## JSON format specifics
 Most of the fields in proto message can be intuitively mapped to `json` types. There are some exclusions though:
