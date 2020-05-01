@@ -40,6 +40,10 @@ func (e *callerError) Temporary() bool {
 	return code != codes.Unavailable
 }
 
+func (e *callerError) Cause() error {
+	return e.err
+}
+
 func newCallerError(err error) *callerError {
 	return &callerError{err}
 }

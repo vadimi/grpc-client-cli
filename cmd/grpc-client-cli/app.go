@@ -33,6 +33,7 @@ type app struct {
 	servicesList  []*services.ServiceMeta
 	messageReader *msgReader
 	opts          *startOpts
+	w             io.Writer
 }
 
 type startOpts struct {
@@ -51,6 +52,10 @@ func newApp(opts *startOpts) (*app, error) {
 	a := &app{
 		connFact: services.NewGrpcConnFactory(),
 		opts:     opts,
+	}
+
+	if a.w == nil {
+		a.w = os.Stdout
 	}
 
 	svc := services.NewServiceMetaData(a.connFact)
@@ -174,7 +179,7 @@ func (a *app) callUnary(ctx context.Context, method *desc.MethodDescriptor, mess
 	}
 
 	re := regexp.MustCompile(`\[\s*?\]`) // collapse empty array to one line
-	fmt.Println(re.ReplaceAllString(string(result), "[]"))
+	a.w.Write(re.ReplaceAll(result, []byte("[]")))
 
 	return nil
 }
@@ -183,20 +188,20 @@ func (a *app) callServerStream(ctx context.Context, method *desc.MethodDescripto
 	serviceCaller := services.NewServiceCaller(a.connFact)
 	result, errChan := serviceCaller.CallServerStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 
-	fmt.Print("[")
+	a.w.Write([]byte("["))
 	cnt := 0
 	for {
 		select {
 		case r := <-result:
 			if r != nil {
 				if cnt > 0 {
-					fmt.Println(",")
+					a.w.Write([]byte(","))
 				}
-				fmt.Print(string(r))
+				a.w.Write(r)
 				cnt++
 			}
 		case err := <-errChan:
-			fmt.Println("]")
+			a.w.Write([]byte("]"))
 			return err
 		}
 	}
