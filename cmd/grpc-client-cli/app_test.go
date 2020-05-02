@@ -125,6 +125,7 @@ func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
 
 	if jsonString(root, "$.payload.type") != payloadType {
 		t.Errorf("payload type not found: %s", res)
+		return
 	}
 
 	if jsonString(root, "$.payload.body") != body {
@@ -183,11 +184,12 @@ func appCallStreamOutput(t *testing.T, app *app, buf *bytes.Buffer) {
 	}
 
 	if jsonString(root, "$[0].payload.body") != getEncBody(respSize1) {
-		t.Errorf("payload body not found: %s", root)
+		t.Errorf("payload body[0] not found: %s", root)
+		return
 	}
 
 	if jsonString(root, "$[1].payload.body") != getEncBody(respSize2) {
-		t.Errorf("payload body not found: %s", root)
+		t.Errorf("payload body[1] not found: %s", root)
 	}
 }
 
