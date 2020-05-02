@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jhump/protoreflect/desc"
 	"github.com/pkg/errors"
 	"github.com/spyzhov/ajson"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
@@ -26,29 +27,42 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestAppCallUnaryServerError(t *testing.T) {
+func TestAppServiceCalls(t *testing.T) {
 	app, err := newApp(&startOpts{
 		Target:        app_testing.TestServerAddr(),
 		Deadline:      15,
 		IsInteractive: false,
 	})
 
-	var buf bytes.Buffer
-	app.w = &buf
+	buf := &bytes.Buffer{}
+	app.w = buf
 
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	m, err := app.selectMethod(app.getService("grpc.testing.TestService"), "UnaryCall")
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	t.Run("appCallUnaryServerError", func(t *testing.T) {
+		appCallUnaryServerError(t, app)
+	})
 
-	if m == nil {
-		t.Error("method not found")
+	t.Run("appCallUnary", func(t *testing.T) {
+		appCallUnary(t, app, buf)
+	})
+
+	t.Run("appCallStreamOutput", func(t *testing.T) {
+		buf.Reset()
+		appCallStreamOutput(t, app, buf)
+	})
+
+	t.Run("appCallStreamOutputError", func(t *testing.T) {
+		appCallStreamOutputError(t, app)
+	})
+}
+
+func appCallUnaryServerError(t *testing.T, app *app) {
+	m, ok := findMethod(t, app, "grpc.testing.TestService", "UnaryCall")
+	if !ok {
 		return
 	}
 
@@ -64,9 +78,10 @@ func TestAppCallUnaryServerError(t *testing.T) {
 
 	msg := fmt.Sprintf(msgTmpl, errCode)
 
-	err = app.callUnary(context.Background(), m, []byte(msg))
+	err := app.callUnary(context.Background(), m, []byte(msg))
 	if err == nil {
 		t.Error("error expected, got nil")
+		return
 	}
 
 	s, _ := status.FromError(errors.Cause(err))
@@ -75,29 +90,9 @@ func TestAppCallUnaryServerError(t *testing.T) {
 	}
 }
 
-func TestAppCallUnary(t *testing.T) {
-	app, err := newApp(&startOpts{
-		Target:        app_testing.TestServerAddr(),
-		Deadline:      15,
-		IsInteractive: false,
-	})
-
-	var buf bytes.Buffer
-	app.w = &buf
-
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	m, err := app.selectMethod(app.getService("grpc.testing.TestService"), "UnaryCall")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if m == nil {
-		t.Error("method not found")
+func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
+	m, ok := findMethod(t, app, "grpc.testing.TestService", "UnaryCall")
+	if !ok {
 		return
 	}
 
@@ -115,7 +110,7 @@ func TestAppCallUnary(t *testing.T) {
 
 	msg := fmt.Sprintf(msgTmpl, payloadType, body)
 
-	err = app.callUnary(context.Background(), m, []byte(msg))
+	err := app.callUnary(context.Background(), m, []byte(msg))
 	if err != nil {
 		t.Errorf("error executing callUnary(): %v", err)
 		return
@@ -137,29 +132,9 @@ func TestAppCallUnary(t *testing.T) {
 	}
 }
 
-func TestAppCallStreamOutput(t *testing.T) {
-	app, err := newApp(&startOpts{
-		Target:        app_testing.TestServerAddr(),
-		Deadline:      15,
-		IsInteractive: false,
-	})
-
-	var buf bytes.Buffer
-	app.w = &buf
-
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	m, err := app.selectMethod(app.getService("grpc.testing.TestService"), "StreamingOutputCall")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if m == nil {
-		t.Error("method not found")
+func appCallStreamOutput(t *testing.T, app *app, buf *bytes.Buffer) {
+	m, ok := findMethod(t, app, "grpc.testing.TestService", "StreamingOutputCall")
+	if !ok {
 		return
 	}
 
@@ -189,7 +164,7 @@ func TestAppCallStreamOutput(t *testing.T) {
 
 	msg := fmt.Sprintf(msgTmpl, payloadType, getEncBody(1), respSize1, respSize2)
 
-	err = app.callServerStream(context.Background(), m, []byte(msg))
+	err := app.callServerStream(context.Background(), m, []byte(msg))
 	if err != nil {
 		t.Errorf("error executing callUnary(): %v", err)
 		return
@@ -216,6 +191,36 @@ func TestAppCallStreamOutput(t *testing.T) {
 	}
 }
 
+func appCallStreamOutputError(t *testing.T, app *app) {
+	m, ok := findMethod(t, app, "grpc.testing.TestService", "StreamingOutputCall")
+	if !ok {
+		return
+	}
+
+	errCode := int32(codes.Internal)
+
+	msgTmpl := `
+{
+  "response_status": {
+    "code": %d
+  }
+}
+`
+
+	msg := fmt.Sprintf(msgTmpl, errCode)
+
+	err := app.callServerStream(context.Background(), m, []byte(msg))
+	if err == nil {
+		t.Error("error expected, got nil")
+		return
+	}
+
+	s, _ := status.FromError(errors.Cause(err))
+	if s.Code() != codes.Code(errCode) {
+		t.Errorf("expectd status code %v, got %v", codes.Code(errCode), s.Code())
+	}
+}
+
 func jsonString(n *ajson.Node, jsonPath string) string {
 	nodes, err := n.JSONPath(jsonPath)
 	if err != nil {
@@ -223,4 +228,19 @@ func jsonString(n *ajson.Node, jsonPath string) string {
 	}
 
 	return nodes[0].MustString()
+}
+
+func findMethod(t *testing.T, app *app, serviceName, methodName string) (*desc.MethodDescriptor, bool) {
+	m, err := app.selectMethod(app.getService(serviceName), methodName)
+	if err != nil {
+		t.Error(err)
+		return nil, false
+	}
+
+	if m == nil {
+		t.Error("method not found")
+		return nil, false
+	}
+
+	return m, true
 }

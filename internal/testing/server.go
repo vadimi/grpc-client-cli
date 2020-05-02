@@ -34,6 +34,11 @@ func (testService) UnaryCall(ctx context.Context, req *grpc_testing.SimpleReques
 }
 
 func (testService) StreamingOutputCall(req *grpc_testing.StreamingOutputCallRequest, str grpc_testing.TestService_StreamingOutputCallServer) error {
+	if req.ResponseStatus != nil && req.ResponseStatus.Code != int32(codes.OK) {
+		return status.Error(codes.Code(req.ResponseStatus.Code), "error")
+
+	}
+
 	rsp := &grpc_testing.StreamingOutputCallResponse{Payload: &grpc_testing.Payload{}}
 	for _, param := range req.ResponseParameters {
 		if str.Context().Err() != nil {
