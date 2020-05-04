@@ -56,7 +56,7 @@ func (b *eurekaBuilder) Build(target resolver.Target, cc resolver.ClientConn, op
 		serviceName = serviceName[serviceNameIndex+1:]
 	}
 
-	portSeparatorIndex := strings.LastIndex(eurekaServer,":")
+	portSeparatorIndex := strings.LastIndex(eurekaServer, ":")
 
 	if portSeparatorIndex == -1 {
 		eurekaServer = eurekaServer + ":8761"
@@ -97,7 +97,18 @@ func (d *eurekaResolver) ResolveNow(resolver.ResolveNowOptions) {
 		var newAddrs []resolver.Address = make([]resolver.Address, 0, len(application.Instances))
 
 		for _, instance := range application.Instances {
-			addr := instance.IpAddr + ":" + strconv.Itoa(application.Instances[0].Port.Port)
+
+			port := strconv.Itoa(instance.Port.Port)
+
+			if val, ok := instance.Metadata.Map["grpc"]; ok {
+				port = val
+			}
+
+			if val, ok := instance.Metadata.Map["grpc.port"]; ok {
+				port = val
+			}
+
+			addr := instance.IpAddr + ":" + port
 			newAddrs = append(newAddrs, resolver.Address{Addr: addr})
 		}
 
