@@ -10,7 +10,7 @@ import (
 	"github.com/vadimi/grpc-client-cli/internal/services"
 
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
@@ -26,7 +26,7 @@ func healthCmd(c *cli.Context) error {
 		return err
 	}
 
-	service := c.GlobalString("service")
+	service := c.String("service")
 	cf := services.NewGrpcConnFactory()
 	defer cf.Close()
 	conn, err := cf.GetConn(target)
@@ -34,7 +34,7 @@ func healthCmd(c *cli.Context) error {
 		return err
 	}
 
-	deadline := c.GlobalInt("deadline")
+	deadline := c.Int("deadline")
 	client := grpc_health_v1.NewHealthClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(deadline)*time.Second)
 	defer cancel()
