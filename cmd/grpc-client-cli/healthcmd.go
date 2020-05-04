@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -15,6 +16,10 @@ import (
 )
 
 func healthCmd(c *cli.Context) error {
+	return checkHealth(c, os.Stdout)
+}
+
+func checkHealth(c *cli.Context, out io.Writer) error {
 	target := ""
 	if c.NArg() > 0 {
 		target = c.Args().First()
@@ -50,5 +55,5 @@ func healthCmd(c *cli.Context) error {
 		Indent:       " ",
 	}
 
-	return m.Marshal(os.Stdout, resp)
+	return m.Marshal(out, resp)
 }

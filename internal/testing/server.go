@@ -8,6 +8,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
@@ -78,6 +79,7 @@ func SetupTestServer() error {
 	testGrpcServer = grpc.NewServer()
 	testSvc := &testService{}
 	grpc_testing.RegisterTestServiceServer(testGrpcServer, testSvc)
+	healthpb.RegisterHealthServer(testGrpcServer, &healthService{})
 	reflection.Register(testGrpcServer)
 
 	port := 0
