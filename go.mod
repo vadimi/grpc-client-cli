@@ -6,6 +6,7 @@ require (
 	github.com/jhump/protoreflect v1.6.0
 	github.com/peterh/liner v1.2.0
 	github.com/pkg/errors v0.9.1
+	github.com/spyzhov/ajson v0.2.1
 	github.com/urfave/cli/v2 v2.2.0
 	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
 	google.golang.org/grpc v1.28.1
