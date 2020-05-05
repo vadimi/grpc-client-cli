@@ -237,7 +237,7 @@ func (a *app) printService(name string) error {
 	for _, s := range a.servicesList {
 		if normalizedName != "" && strings.Contains(strings.ToLower(s.Name), normalizedName) {
 			p := &protoprint.Printer{}
-			return p.PrintProtoFile(s.File, os.Stdout)
+			return p.PrintProtoFile(s.File, a.w)
 		}
 	}
 	return fmt.Errorf("service %s not found, cannot print", name)

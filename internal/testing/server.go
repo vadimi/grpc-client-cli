@@ -111,3 +111,7 @@ func StopTestServer() {
 func TestServerAddr() string {
 	return testServerAddr
 }
+
+func TestServerInstance() *grpc.Server {
+	return testGrpcServer
+}
