@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vadimi/grpc-client-cli/internal/services"
-
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/jhump/protoreflect/dynamic"
+	"github.com/vadimi/grpc-client-cli/internal/caller"
+	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
 	survey "gopkg.in/AlecAivazis/survey.v1"
 	"gopkg.in/AlecAivazis/survey.v1/core"
@@ -29,8 +29,8 @@ var (
 )
 
 type app struct {
-	connFact      *services.GrpcConnFactory
-	servicesList  []*services.ServiceMeta
+	connFact      *rpc.GrpcConnFactory
+	servicesList  []*caller.ServiceMeta
 	messageReader *msgReader
 	opts          *startOpts
 	w             io.Writer
@@ -50,7 +50,7 @@ func newApp(opts *startOpts) (*app, error) {
 	core.SelectFocusIcon = "→"
 
 	a := &app{
-		connFact: services.NewGrpcConnFactory(),
+		connFact: rpc.NewGrpcConnFactory(),
 		opts:     opts,
 	}
 
@@ -58,7 +58,7 @@ func newApp(opts *startOpts) (*app, error) {
 		a.w = os.Stdout
 	}
 
-	svc := services.NewServiceMetaData(a.connFact)
+	svc := caller.NewServiceMetaData(a.connFact)
 	services, err := svc.GetServiceMetaDataList(a.opts.Target, a.opts.Deadline)
 	if err != nil {
 		return nil, err
@@ -136,7 +136,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte, deadlin
 			}
 		}
 
-		ctx, cancel := context.WithTimeout(services.DiagContext(), time.Duration(deadline)*time.Second)
+		ctx, cancel := context.WithTimeout(rpc.DiagContext(), time.Duration(deadline)*time.Second)
 		if method.IsServerStreaming() && !method.IsClientStreaming() {
 			err = a.callServerStream(ctx, method, selectedMsg)
 		} else if !method.IsServerStreaming() && !method.IsClientStreaming() {
@@ -146,7 +146,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte, deadlin
 		}
 
 		if err != nil {
-			if !services.IsTemporary(err) {
+			if !caller.IsErrTransient(err) {
 				cancel()
 				return err
 			}
@@ -154,7 +154,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte, deadlin
 		}
 
 		if a.opts.Verbose {
-			di := services.ExtractDiagInfo(ctx)
+			di := rpc.ExtractDiagInfo(ctx)
 			fmt.Println()
 			fmt.Println("Request duration:", di.Duration)
 			fmt.Printf("Request size: %d bytes\n", di.ReqSize)
@@ -171,7 +171,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte, deadlin
 }
 
 func (a *app) callUnary(ctx context.Context, method *desc.MethodDescriptor, messageJSON []byte) error {
-	serviceCaller := services.NewServiceCaller(a.connFact)
+	serviceCaller := caller.NewServiceCaller(a.connFact)
 
 	result, err := serviceCaller.CallJSON(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 	if err != nil {
@@ -185,7 +185,7 @@ func (a *app) callUnary(ctx context.Context, method *desc.MethodDescriptor, mess
 }
 
 func (a *app) callServerStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON []byte) error {
-	serviceCaller := services.NewServiceCaller(a.connFact)
+	serviceCaller := caller.NewServiceCaller(a.connFact)
 	result, errChan := serviceCaller.CallServerStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 
 	a.w.Write([]byte("["))
@@ -243,7 +243,7 @@ func (a *app) printService(name string) error {
 	return fmt.Errorf("service %s not found, cannot print", name)
 }
 
-func (a *app) selectMethod(s *services.ServiceMeta, name string) (*desc.MethodDescriptor, error) {
+func (a *app) selectMethod(s *caller.ServiceMeta, name string) (*desc.MethodDescriptor, error) {
 	noMethod := "[..]"
 	methodNames := []string{noMethod}
 	for _, m := range s.Methods {
@@ -310,7 +310,7 @@ func (a *app) selectMessage(messageDesc *desc.MessageDescriptor) ([]byte, error)
 	}
 }
 
-func (a *app) getService(serviceName string) *services.ServiceMeta {
+func (a *app) getService(serviceName string) *caller.ServiceMeta {
 	for _, s := range a.servicesList {
 		if s.Name == serviceName {
 			return s
@@ -323,7 +323,7 @@ func (a *app) getService(serviceName string) *services.ServiceMeta {
 func (a *app) getFieldNames(messageDesc *desc.MessageDescriptor) []string {
 	fields := map[string]struct{}{}
 
-	walker := services.NewFieldWalker()
+	walker := caller.NewFieldWalker()
 	walker.Walk(messageDesc, func(f *desc.FieldDescriptor) {
 		fields[f.GetName()] = struct{}{}
 	})

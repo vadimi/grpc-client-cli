@@ -1,4 +1,4 @@
-package services
+package caller
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
 	"github.com/pkg/errors"
+	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
@@ -17,7 +18,7 @@ var (
 )
 
 type ServiceMetaData struct {
-	connFact *GrpcConnFactory
+	connFact *rpc.GrpcConnFactory
 }
 
 type ServiceMeta struct {
@@ -26,7 +27,7 @@ type ServiceMeta struct {
 	File    *desc.FileDescriptor
 }
 
-func NewServiceMetaData(connFact *GrpcConnFactory) *ServiceMetaData {
+func NewServiceMetaData(connFact *rpc.GrpcConnFactory) *ServiceMetaData {
 	return &ServiceMetaData{connFact}
 }
 
