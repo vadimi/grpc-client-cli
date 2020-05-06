@@ -1,10 +1,11 @@
-package services
+package caller
 
 import (
 	"io"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/pkg/errors"
+	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
@@ -21,8 +22,8 @@ type temporary interface {
 	Temporary() bool
 }
 
-// IsTemporary returns true if err is temporary.
-func IsTemporary(err error) bool {
+// IsErrTransient returns true if err is t.
+func IsErrTransient(err error) bool {
 	te, ok := err.(temporary)
 	return ok && te.Temporary()
 }
@@ -49,10 +50,10 @@ func newCallerError(err error) *callerError {
 }
 
 type ServiceCaller struct {
-	connFact *GrpcConnFactory
+	connFact *rpc.GrpcConnFactory
 }
 
-func NewServiceCaller(connFact *GrpcConnFactory) *ServiceCaller {
+func NewServiceCaller(connFact *rpc.GrpcConnFactory) *ServiceCaller {
 	return &ServiceCaller{connFact}
 }
 

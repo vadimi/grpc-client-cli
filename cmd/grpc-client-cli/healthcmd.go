@@ -8,10 +8,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/vadimi/grpc-client-cli/internal/services"
-
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/urfave/cli/v2"
+	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
@@ -32,7 +31,7 @@ func checkHealth(c *cli.Context, out io.Writer) error {
 	}
 
 	service := c.String("service")
-	cf := services.NewGrpcConnFactory()
+	cf := rpc.NewGrpcConnFactory()
 	defer cf.Close()
 	conn, err := cf.GetConn(target)
 	if err != nil {
