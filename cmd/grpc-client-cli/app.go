@@ -136,7 +136,8 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte, deadlin
 			}
 		}
 
-		ctx, cancel := context.WithTimeout(rpc.DiagContext(), time.Duration(deadline)*time.Second)
+		callTimeout := time.Duration(deadline) * time.Second
+		ctx, cancel := context.WithTimeout(rpc.WithStatsCtx(context.Background()), callTimeout)
 		if method.IsServerStreaming() && !method.IsClientStreaming() {
 			err = a.callServerStream(ctx, method, selectedMsg)
 		} else if !method.IsServerStreaming() && !method.IsClientStreaming() {
@@ -154,11 +155,11 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte, deadlin
 		}
 
 		if a.opts.Verbose {
-			di := rpc.ExtractDiagInfo(ctx)
-			fmt.Println()
-			fmt.Println("Request duration:", di.Duration)
-			fmt.Printf("Request size: %d bytes\n", di.ReqSize)
-			fmt.Printf("Response size: %d bytes\n", di.RespSize)
+			s := rpc.ExtractRpcStats(ctx)
+			fmt.Fprintln(a.w)
+			fmt.Fprintln(a.w, "Request duration:", s.Duration)
+			fmt.Fprintf(a.w, "Request size: %d bytes\n", s.ReqSize)
+			fmt.Fprintf(a.w, "Response size: %d bytes\n", s.RespSize)
 		}
 
 		// if we pass a single message, return
@@ -179,7 +180,7 @@ func (a *app) callUnary(ctx context.Context, method *desc.MethodDescriptor, mess
 	}
 
 	re := regexp.MustCompile(`\[\s*?\]`) // collapse empty array to one line
-	a.w.Write(re.ReplaceAll(result, []byte("[]")))
+	fmt.Fprintf(a.w, "%s\n", re.ReplaceAll(result, []byte("[]")))
 
 	return nil
 }
@@ -188,20 +189,20 @@ func (a *app) callServerStream(ctx context.Context, method *desc.MethodDescripto
 	serviceCaller := caller.NewServiceCaller(a.connFact)
 	result, errChan := serviceCaller.CallServerStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 
-	a.w.Write([]byte("["))
+	fmt.Fprint(a.w, "[")
 	cnt := 0
 	for {
 		select {
 		case r := <-result:
 			if r != nil {
 				if cnt > 0 {
-					a.w.Write([]byte(","))
+					fmt.Fprintln(a.w, ",")
 				}
 				a.w.Write(r)
 				cnt++
 			}
 		case err := <-errChan:
-			a.w.Write([]byte("]"))
+			fmt.Fprintln(a.w, "]")
 			return err
 		}
 	}
