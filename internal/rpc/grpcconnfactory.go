@@ -72,6 +72,7 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 			grpc.WithDisableServiceConfig(),
 			grpc.WithInsecure(),
 			grpc.WithBalancerName(roundrobin.Name),
+			grpc.WithStatsHandler(newStatsHanler()),
 		)
 
 		svcTarget := connOpts.Host
@@ -82,13 +83,8 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 			opts = append(opts, grpc.WithAuthority(connOpts.Host))
 		}
 
-		unaryInterceptors := []grpc.UnaryClientInterceptor{
-			DiagUnaryClientInterceptor(),
-		}
-
-		streamInterceptors := []grpc.StreamClientInterceptor{
-			DiagStreamClientInterceptor(),
-		}
+		unaryInterceptors := []grpc.UnaryClientInterceptor{}
+		streamInterceptors := []grpc.StreamClientInterceptor{}
 
 		if len(connOpts.Metadata) > 0 {
 			unaryInterceptors = append(unaryInterceptors,

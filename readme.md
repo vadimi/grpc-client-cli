@@ -12,10 +12,16 @@ Just specify a connection string to a servce in `host:port` format and follow in
 
 For full list of supported command line args please run `grpc-client-cli -h`.
 
-The utility also supports authority header override.
+The utility also supports `:authority` header override.
 
 ```
 grpc-client-cli localhost:5050,authority=localhost:9090
+```
+
+It's also possible to capture some of the diagnostic information like request and response sizes, call duration:
+
+```
+grpc-client-cli -V localhost:4400
 ```
 
 ### Subcommands

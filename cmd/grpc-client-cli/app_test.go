@@ -8,10 +8,12 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/pkg/errors"
 	"github.com/spyzhov/ajson"
+	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -245,4 +247,98 @@ func findMethod(t *testing.T, app *app, serviceName, methodName string) (*desc.M
 	}
 
 	return m, true
+}
+
+func TestStatsHandler(t *testing.T) {
+	app, err := newApp(&startOpts{
+		Target:        app_testing.TestServerAddr(),
+		Deadline:      15,
+		IsInteractive: false,
+		Verbose:       true,
+	})
+
+	buf := &bytes.Buffer{}
+	app.w = buf
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	payloadType := "UNCOMPRESSABLE"
+	body := base64.StdEncoding.EncodeToString([]byte("1"))
+
+	msgTmpl := `
+{
+  "payload": {
+    "type": "%s",
+    "body": "%s"
+  }
+}
+`
+
+	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, body))
+
+	t.Run("checkStats", func(t *testing.T) {
+		checkStats(t, app, msg)
+	})
+
+	t.Run("checkStatsInOutput", func(t *testing.T) {
+		checkStatsInOutput(t, app, msg, buf)
+	})
+}
+
+func checkStats(t *testing.T, app *app, msg []byte) {
+	m, ok := findMethod(t, app, "grpc.testing.TestService", "UnaryCall")
+	if !ok {
+		return
+	}
+
+	callTimeout := time.Duration(app.opts.Deadline) * time.Second
+	ctx, cancel := context.WithTimeout(rpc.WithStatsCtx(context.Background()), callTimeout)
+	defer cancel()
+
+	err := app.callUnary(ctx, m, []byte(msg))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	s := rpc.ExtractRpcStats(ctx)
+	if s == nil {
+		t.Error("stats are missing in ctx")
+		return
+	}
+
+	if s.ReqSize > s.RespSize {
+		t.Errorf("ReqSize should be <= RespSize: %v", s)
+	}
+}
+
+func checkStatsInOutput(t *testing.T, app *app, msg []byte, buf *bytes.Buffer) {
+	m, ok := findMethod(t, app, "grpc.testing.TestService", "UnaryCall")
+	if !ok {
+		return
+	}
+
+	err := app.callService(m, msg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	res := buf.String()
+
+	if !strings.Contains(res, "Request duration:") {
+		t.Errorf("Request duration is expected in the output: %s", res)
+		return
+	}
+
+	if !strings.Contains(res, "Request size:") {
+		t.Errorf("Request size is expected in the output: %s", res)
+	}
+
+	if !strings.Contains(res, "Response size:") {
+		t.Errorf("Response size is expected in the output: %s", res)
+	}
 }
