@@ -334,6 +334,10 @@ func checkStatsInOutput(t *testing.T, app *app, msg []byte, buf *bytes.Buffer) {
 		return
 	}
 
+	if !strings.Contains(res, "Request size:") {
+		t.Errorf("Request size is expected in the output: %s", res)
+	}
+
 	if !strings.Contains(res, "Response size:") {
 		t.Errorf("Response size is expected in the output: %s", res)
 	}
