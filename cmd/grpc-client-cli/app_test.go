@@ -321,7 +321,7 @@ func checkStatsInOutput(t *testing.T, app *app, msg []byte, buf *bytes.Buffer) {
 		return
 	}
 
-	err := app.callService(m, msg, app.opts.Deadline)
+	err := app.callService(m, msg)
 	if err != nil {
 		t.Error(err)
 		return

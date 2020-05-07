@@ -99,7 +99,7 @@ func (a *app) Start(message []byte) error {
 			return err
 		}
 
-		err = a.callService(method, message, a.opts.Deadline)
+		err = a.callService(method, message)
 		// Ctrl+D will trigger io.EOF if the line is empty
 		// restart the app from the beginning
 		if err != io.EOF {
@@ -125,7 +125,7 @@ func (a *app) Close() error {
 	return nil
 }
 
-func (a *app) callService(method *desc.MethodDescriptor, message []byte, deadline int) error {
+func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 	for {
 		var err error
 		selectedMsg := message
@@ -136,7 +136,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte, deadlin
 			}
 		}
 
-		callTimeout := time.Duration(deadline) * time.Second
+		callTimeout := time.Duration(a.opts.Deadline) * time.Second
 		ctx, cancel := context.WithTimeout(rpc.WithStatsCtx(context.Background()), callTimeout)
 		if method.IsServerStreaming() && !method.IsClientStreaming() {
 			err = a.callServerStream(ctx, method, selectedMsg)
