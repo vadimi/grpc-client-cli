@@ -24,6 +24,36 @@ It's also possible to capture some of the diagnostic information like request an
 grpc-client-cli -V localhost:4400
 ```
 
+### Eureka Support
+
+grpc-client-cli provides integrated support for services published to a Eureka service registry.
+
+Connecting to a service published to Eureka running on http://localhost:8761/eureka/
+
+```
+grpc-client-cli eureka://application-name/
+```
+
+Connecting to a service running remotely on http://example.com:8761/eureka/
+
+```
+grpc-client-cli eureka://example.com/eureka/application-name/
+```
+
+Connecting to a service running remotely on http://example.com:9000/not-eureka/
+
+```
+grpc-client-cli eureka://example.com:9000/not-eureka/application-name/
+```
+
+The Eureka currently connects to services using the IP Addresses published in the service registry and the following published ports, in order:
+
+ * Metadata key "grpc"
+ * Metadata key "grpc.port"
+ * Default insecure port
+
+If you require a different default port, please file an issue, and that port will be considered for inclusion.
+
 ### Subcommands
 **discover** - print service proto contract
 
