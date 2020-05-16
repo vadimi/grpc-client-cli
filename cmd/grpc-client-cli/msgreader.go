@@ -23,6 +23,18 @@ type msgReader struct {
 	line     *liner.State
 }
 
+type readLineOptions struct {
+	prompt string
+}
+
+type ReadLineOpt func(*readLineOptions)
+
+func WithReadLinePrompt(p string) ReadLineOpt {
+	return func(o *readLineOptions) {
+		o.prompt = p
+	}
+}
+
 const readBufferSize = 8388608
 
 func newMsgReader(settings *msgReaderSettings) (*msgReader, error) {
@@ -50,7 +62,7 @@ func (r *msgReader) Close() (err error) {
 	return
 }
 
-func (r *msgReader) ReadLine(names []string) ([]byte, error) {
+func (r *msgReader) ReadLine(names []string, opts ...ReadLineOpt) ([]byte, error) {
 	r.line.SetWordCompleter(func(line string, pos int) (head string, completions []string, tail string) {
 		h := ""
 		word := line[0:pos]
@@ -69,7 +81,18 @@ func (r *msgReader) ReadLine(names []string) ([]byte, error) {
 		}
 		return
 	})
-	msg, err := r.line.Prompt(r.settings.Prompt)
+
+	rlOpts := &readLineOptions{}
+	for _, o := range opts {
+		o(rlOpts)
+	}
+
+	prompt := r.settings.Prompt
+	if rlOpts.prompt != "" {
+		prompt = rlOpts.prompt
+	}
+
+	msg, err := r.line.Prompt(prompt)
 	if err != nil {
 		if err == liner.ErrPromptAborted {
 			return nil, terminal.InterruptErr

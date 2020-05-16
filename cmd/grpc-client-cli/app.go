@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -21,7 +20,6 @@ import (
 	"google.golang.org/grpc"
 	survey "gopkg.in/AlecAivazis/survey.v1"
 	"gopkg.in/AlecAivazis/survey.v1/core"
-	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 var (
@@ -128,9 +126,22 @@ func (a *app) Close() error {
 func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 	for {
 		var err error
+		var messages [][]byte
+		buf := newMsgBuffer(&msgBufferOptions{
+			prompt:     "Next message (press Ctrl-D to finish): ",
+			reader:     a.messageReader,
+			fieldNames: a.getFieldNames(method.GetInputType()),
+			helpText:   a.getMessageDefaults(method.GetInputType()),
+		})
+
 		selectedMsg := message
 		if len(selectedMsg) == 0 {
-			selectedMsg, err = a.selectMessage(method.GetInputType())
+			if method.IsClientStreaming() {
+				messages, err = buf.ReadMessages()
+			} else {
+				selectedMsg, err = buf.ReadMessage()
+			}
+
 			if err != nil {
 				return err
 			}
@@ -142,8 +153,10 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 			err = a.callServerStream(ctx, method, selectedMsg)
 		} else if !method.IsServerStreaming() && !method.IsClientStreaming() {
 			err = a.callUnary(ctx, method, selectedMsg)
+		} else if !method.IsServerStreaming() && method.IsClientStreaming() {
+			err = a.callClientStream(ctx, method, messages)
 		} else {
-			err = errors.New("client/bi-directional streaming is not supported")
+			err = errors.New("bi-directional streaming is not supported")
 		}
 
 		if err != nil {
@@ -179,10 +192,27 @@ func (a *app) callUnary(ctx context.Context, method *desc.MethodDescriptor, mess
 		return err
 	}
 
-	re := regexp.MustCompile(`\[\s*?\]`) // collapse empty array to one line
-	fmt.Fprintf(a.w, "%s\n", re.ReplaceAll(result, []byte("[]")))
+	a.printResult(result)
 
 	return nil
+}
+
+func (a *app) callClientStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
+	serviceCaller := caller.NewServiceCaller(a.connFact)
+
+	result, err := serviceCaller.CallClientStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
+	if err != nil {
+		return err
+	}
+
+	a.printResult(result)
+
+	return nil
+}
+
+func (a *app) printResult(r []byte) {
+	re := regexp.MustCompile(`\[\s*?\]`) // collapse empty array to one line
+	fmt.Fprintf(a.w, "%s\n", re.ReplaceAll(r, []byte("[]")))
 }
 
 func (a *app) callServerStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON []byte) error {
@@ -284,33 +314,6 @@ func (a *app) selectMethod(s *caller.ServiceMeta, name string) (*desc.MethodDesc
 	return nil, errors.New("method not found")
 }
 
-func (a *app) selectMessage(messageDesc *desc.MessageDescriptor) ([]byte, error) {
-	fieldNames := a.getFieldNames(messageDesc)
-	for {
-		message, err := a.messageReader.ReadLine(fieldNames)
-		if err != nil {
-			if err == terminal.InterruptErr {
-				return nil, terminal.InterruptErr
-			}
-			return message, err
-		}
-
-		normMsg := bytes.TrimSpace(message)
-		if len(normMsg) > 0 {
-			if bytes.Equal(normMsg, []byte("?")) {
-				msg := dynamic.NewMessage(messageDesc)
-				msgJSON, _ := msg.MarshalJSONPB(&jsonpb.Marshaler{
-					EmitDefaults: true,
-					OrigName:     true,
-				})
-				fmt.Println(string(msgJSON))
-				continue
-			}
-			return normMsg, nil
-		}
-	}
-}
-
 func (a *app) getService(serviceName string) *caller.ServiceMeta {
 	for _, s := range a.servicesList {
 		if s.Name == serviceName {
@@ -336,4 +339,14 @@ func (a *app) getFieldNames(messageDesc *desc.MessageDescriptor) []string {
 
 	sort.Strings(names)
 	return names
+}
+
+func (a *app) getMessageDefaults(messageDesc *desc.MessageDescriptor) string {
+	msg := dynamic.NewMessage(messageDesc)
+	msgJSON, _ := msg.MarshalJSONPB(&jsonpb.Marshaler{
+		EmitDefaults: true,
+		OrigName:     true,
+	})
+
+	return string(msgJSON)
 }
