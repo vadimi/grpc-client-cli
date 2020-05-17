@@ -3,15 +3,24 @@ package testing
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
+	"strconv"
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/interop/grpc_testing"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	// grpc code to exit the method
+	// useful when testing errors behavior
+	MethodExitCode = "exit-code"
 )
 
 var testServerAddr = ""
@@ -64,7 +73,26 @@ func (testService) StreamingOutputCall(req *grpc_testing.StreamingOutputCallRequ
 }
 
 func (testService) StreamingInputCall(str grpc_testing.TestService_StreamingInputCallServer) error {
-	return nil
+	exitCode := extractStatusCodes(str.Context())
+	if exitCode != codes.OK {
+		return status.Error(exitCode, "error")
+	}
+
+	size := 0
+	for {
+		req, err := str.Recv()
+		if err == io.EOF {
+			return str.SendAndClose(&grpc_testing.StreamingInputCallResponse{
+				AggregatedPayloadSize: int32(size),
+			})
+		}
+
+		size += len(req.Payload.Body)
+
+		if err != nil {
+			return err
+		}
+	}
 }
 
 func (testService) FullDuplexCall(str grpc_testing.TestService_FullDuplexCallServer) error {
@@ -114,4 +142,22 @@ func TestServerAddr() string {
 
 func TestServerInstance() *grpc.Server {
 	return testGrpcServer
+}
+
+func extractStatusCodes(ctx context.Context) codes.Code {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return codes.OK
+	}
+
+	values := md.Get(MethodExitCode)
+	if len(values) == 0 {
+		return codes.OK
+	}
+
+	i, err := strconv.Atoi(values[len(values)-1])
+	if err != nil {
+		return codes.OK
+	}
+	return codes.Code(i)
 }

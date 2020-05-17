@@ -5,30 +5,40 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/dynamic"
+	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 type msgBuffer struct {
-	opts *msgBufferOptions
+	opts       *msgBufferOptions
+	fieldNames []string
+	// next message prompt
+	nextPrompt string
+	helpText   string
 }
 
 type msgBufferOptions struct {
-	prompt     string
-	reader     *msgReader
-	fieldNames []string
-	helpText   string
+	reader      *msgReader
+	messageDesc *desc.MessageDescriptor
 }
 
 func newMsgBuffer(opts *msgBufferOptions) *msgBuffer {
 	return &msgBuffer{
-		opts: opts,
+		nextPrompt: "Next message (press Ctrl-D to finish): ",
+		opts:       opts,
+		fieldNames: fieldNames(opts.messageDesc),
+		helpText:   getMessageDefaults(opts.messageDesc),
 	}
 }
 
 func (b *msgBuffer) ReadMessage(opts ...ReadLineOpt) ([]byte, error) {
 	for {
-		message, err := b.opts.reader.ReadLine(b.opts.fieldNames, opts...)
+		message, err := b.opts.reader.ReadLine(b.fieldNames, opts...)
 		if err != nil {
 			if err == terminal.InterruptErr {
 				return nil, terminal.InterruptErr
@@ -39,7 +49,12 @@ func (b *msgBuffer) ReadMessage(opts ...ReadLineOpt) ([]byte, error) {
 		normMsg := bytes.TrimSpace(message)
 		if len(normMsg) > 0 {
 			if bytes.Equal(normMsg, []byte("?")) {
-				fmt.Println(b.opts.helpText)
+				fmt.Println(b.helpText)
+				continue
+			}
+
+			if err := b.validate(normMsg); err != nil {
+				fmt.Println(err)
 				continue
 			}
 			return normMsg, nil
@@ -60,7 +75,7 @@ func (b *msgBuffer) ReadMessages() ([][]byte, error) {
 	buf := [][]byte{msg}
 
 	for {
-		msg, err := b.ReadMessage(WithReadLinePrompt(b.opts.prompt))
+		msg, err := b.ReadMessage(WithReadLinePrompt(b.nextPrompt))
 		if err == terminal.InterruptErr {
 			return nil, terminal.InterruptErr
 		}
@@ -77,4 +92,44 @@ func (b *msgBuffer) ReadMessages() ([][]byte, error) {
 
 		buf = append(buf, msg)
 	}
+}
+
+func (b *msgBuffer) validate(msgJSON []byte) error {
+	msg := dynamic.NewMessage(b.opts.messageDesc)
+	err := msg.UnmarshalJSON(msgJSON)
+	errFmt := "invalid message: %w"
+	if err == io.ErrUnexpectedEOF || err == io.EOF {
+		errFmt = "syntax error: %w"
+	}
+	if err != nil {
+		return fmt.Errorf(errFmt, err)
+	}
+	return nil
+}
+
+func fieldNames(messageDesc *desc.MessageDescriptor) []string {
+	fields := map[string]struct{}{}
+
+	walker := caller.NewFieldWalker()
+	walker.Walk(messageDesc, func(f *desc.FieldDescriptor) {
+		fields[f.GetName()] = struct{}{}
+	})
+
+	names := make([]string, 0, len(fields))
+	for f := range fields {
+		names = append(names, f)
+	}
+
+	sort.Strings(names)
+	return names
+}
+
+func getMessageDefaults(messageDesc *desc.MessageDescriptor) string {
+	msg := dynamic.NewMessage(messageDesc)
+	msgJSON, _ := msg.MarshalJSONPB(&jsonpb.Marshaler{
+		EmitDefaults: true,
+		OrigName:     true,
+	})
+
+	return string(msgJSON)
 }

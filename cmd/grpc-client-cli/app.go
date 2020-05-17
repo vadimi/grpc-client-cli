@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,10 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoprint"
-	"github.com/jhump/protoreflect/dynamic"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
@@ -128,10 +128,8 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 		var err error
 		var messages [][]byte
 		buf := newMsgBuffer(&msgBufferOptions{
-			prompt:     "Next message (press Ctrl-D to finish): ",
-			reader:     a.messageReader,
-			fieldNames: a.getFieldNames(method.GetInputType()),
-			helpText:   a.getMessageDefaults(method.GetInputType()),
+			reader:      a.messageReader,
+			messageDesc: method.GetInputType(),
 		})
 
 		selectedMsg := message
@@ -141,10 +139,12 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 			} else {
 				selectedMsg, err = buf.ReadMessage()
 			}
+		} else if method.IsClientStreaming() {
+			messages, err = toJSONArray(message)
+		}
 
-			if err != nil {
-				return err
-			}
+		if err != nil {
+			return err
 		}
 
 		callTimeout := time.Duration(a.opts.Deadline) * time.Second
@@ -168,11 +168,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 		}
 
 		if a.opts.Verbose {
-			s := rpc.ExtractRpcStats(ctx)
-			fmt.Fprintln(a.w)
-			fmt.Fprintln(a.w, "Request duration:", s.Duration)
-			fmt.Fprintf(a.w, "Request size: %d bytes\n", s.ReqSize)
-			fmt.Fprintf(a.w, "Response size: %d bytes\n", s.RespSize)
+			a.printVerboseOutput(ctx)
 		}
 
 		// if we pass a single message, return
@@ -324,29 +320,36 @@ func (a *app) getService(serviceName string) *caller.ServiceMeta {
 	return nil
 }
 
-func (a *app) getFieldNames(messageDesc *desc.MessageDescriptor) []string {
-	fields := map[string]struct{}{}
-
-	walker := caller.NewFieldWalker()
-	walker.Walk(messageDesc, func(f *desc.FieldDescriptor) {
-		fields[f.GetName()] = struct{}{}
-	})
-
-	names := make([]string, 0, len(fields))
-	for f := range fields {
-		names = append(names, f)
-	}
-
-	sort.Strings(names)
-	return names
+func (a *app) printVerboseOutput(ctx context.Context) {
+	s := rpc.ExtractRpcStats(ctx)
+	fmt.Fprintln(a.w)
+	fmt.Fprintln(a.w, "Request duration:", s.Duration)
+	fmt.Fprintf(a.w, "Request size: %d bytes\n", s.ReqSize)
+	fmt.Fprintf(a.w, "Response size: %d bytes\n", s.RespSize)
 }
 
-func (a *app) getMessageDefaults(messageDesc *desc.MessageDescriptor) string {
-	msg := dynamic.NewMessage(messageDesc)
-	msgJSON, _ := msg.MarshalJSONPB(&jsonpb.Marshaler{
-		EmitDefaults: true,
-		OrigName:     true,
-	})
+func toJSONArray(msg []byte) ([][]byte, error) {
+	var jsArr []json.RawMessage
+	var err error
+	nmsg := bytes.TrimSpace(msg)
+	if nmsg[0] == byte('{') {
+		var js json.RawMessage
+		err = json.Unmarshal(nmsg, &js)
+		if err == nil {
+			jsArr = append(jsArr, js)
+		}
+	} else {
+		err = json.Unmarshal(nmsg, &jsArr)
+	}
 
-	return string(msgJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([][]byte, len(jsArr))
+	for i := range jsArr {
+		result[i] = jsArr[i]
+	}
+
+	return result, nil
 }
