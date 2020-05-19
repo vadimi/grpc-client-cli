@@ -125,13 +125,13 @@ func (a *app) Close() error {
 
 func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 	for {
-		var err error
-		var messages [][]byte
 		buf := newMsgBuffer(&msgBufferOptions{
 			reader:      a.messageReader,
 			messageDesc: method.GetInputType(),
 		})
 
+		var err error
+		var messages [][]byte
 		selectedMsg := message
 		if len(selectedMsg) == 0 {
 			if method.IsClientStreaming() {
