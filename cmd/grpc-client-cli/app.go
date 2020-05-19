@@ -149,14 +149,18 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 
 		callTimeout := time.Duration(a.opts.Deadline) * time.Second
 		ctx, cancel := context.WithTimeout(rpc.WithStatsCtx(context.Background()), callTimeout)
-		if method.IsServerStreaming() && !method.IsClientStreaming() {
-			err = a.callServerStream(ctx, method, selectedMsg)
-		} else if !method.IsServerStreaming() && !method.IsClientStreaming() {
-			err = a.callUnary(ctx, method, selectedMsg)
-		} else if !method.IsServerStreaming() && method.IsClientStreaming() {
-			err = a.callClientStream(ctx, method, messages)
+		if method.IsServerStreaming() {
+			if method.IsClientStreaming() {
+				err = errors.New("bi-directional streaming is not supported")
+			} else {
+				err = a.callServerStream(ctx, method, selectedMsg)
+			}
 		} else {
-			err = errors.New("bi-directional streaming is not supported")
+			if method.IsClientStreaming() {
+				err = a.callClientStream(ctx, method, messages)
+			} else {
+				err = a.callUnary(ctx, method, selectedMsg)
+			}
 		}
 
 		if err != nil {
