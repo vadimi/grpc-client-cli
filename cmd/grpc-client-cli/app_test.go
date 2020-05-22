@@ -16,6 +16,7 @@ import (
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -59,6 +60,15 @@ func TestAppServiceCalls(t *testing.T) {
 
 	t.Run("appCallStreamOutputError", func(t *testing.T) {
 		appCallStreamOutputError(t, app)
+	})
+
+	t.Run("appCallClientStream", func(t *testing.T) {
+		buf.Reset()
+		appCallClientStream(t, app, buf)
+	})
+
+	t.Run("appCallClientStreamError", func(t *testing.T) {
+		appCallClientStreamError(t, app)
 	})
 }
 
@@ -225,6 +235,107 @@ func appCallStreamOutputError(t *testing.T, app *app) {
 	}
 }
 
+func appCallClientStreamError(t *testing.T, app *app) {
+	m, ok := findMethod(t, app, "grpc.testing.TestService", "StreamingInputCall")
+	if !ok {
+		return
+	}
+
+	errCode := int32(codes.Internal)
+
+	bodyMsg := "testBody"
+	body := base64.StdEncoding.EncodeToString([]byte(bodyMsg))
+
+	msgTmpl := `
+[
+  {
+    "payload": {
+      "body": "%s"
+    }
+  }
+]
+`
+
+	msg := fmt.Sprintf(msgTmpl, body)
+	msgArr, err := toJSONArray([]byte(msg))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	ctx := metadata.AppendToOutgoingContext(context.Background(), app_testing.MethodExitCode, fmt.Sprintf("%d", errCode))
+
+	err = app.callClientStream(ctx, m, msgArr)
+	if err == nil {
+		t.Error("error expected, got nil")
+		return
+	}
+
+	s, _ := status.FromError(errors.Cause(err))
+	if s.Code() != codes.Code(errCode) {
+		t.Errorf("expectd status code %v, got %v", codes.Code(errCode), s.Code())
+	}
+}
+
+func appCallClientStream(t *testing.T, app *app, buf *bytes.Buffer) {
+	m, ok := findMethod(t, app, "grpc.testing.TestService", "StreamingInputCall")
+	if !ok {
+		return
+	}
+
+	bodyMsg := "testBody"
+	body := base64.StdEncoding.EncodeToString([]byte(bodyMsg))
+
+	msgTmpl := `
+[
+  {
+    "payload": {
+      "body": "%s"
+    }
+  },
+  {
+    "payload": {
+      "body": "%s"
+    }
+  }
+]
+`
+
+	msg := fmt.Sprintf(msgTmpl, body, body)
+	msgArr, err := toJSONArray([]byte(msg))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = app.callClientStream(context.Background(), m, msgArr)
+	if err != nil {
+		t.Errorf("error executing callClientStream(): %v", err)
+		return
+	}
+
+	res := buf.Bytes()
+	root, err := ajson.Unmarshal(res)
+	if err != nil {
+		t.Errorf("error unmarshaling result json: %v", err)
+		return
+	}
+
+	if jsonInt32(root, "$.aggregated_payload_size") != int32(len(bodyMsg)*2) {
+		t.Errorf("payload type not found: %s", res)
+		return
+	}
+}
+
+func jsonInt32(n *ajson.Node, jsonPath string) int32 {
+	nodes, err := n.JSONPath(jsonPath)
+	if err != nil {
+		panic(err)
+	}
+
+	return int32(nodes[0].MustNumeric())
+}
+
 func jsonString(n *ajson.Node, jsonPath string) string {
 	nodes, err := n.JSONPath(jsonPath)
 	if err != nil {
@@ -286,6 +397,41 @@ func TestStatsHandler(t *testing.T) {
 	t.Run("checkStatsInOutput", func(t *testing.T) {
 		checkStatsInOutput(t, app, msg, buf)
 	})
+}
+
+func TestToJSONArrayCoversion(t *testing.T) {
+	cases := []struct {
+		name        string
+		msg         string
+		msgCount    int
+		errExpected bool
+	}{
+		{name: "OneMessage", msg: `[{"name": "str"}]`, msgCount: 1, errExpected: false},
+		{name: "OneMessageNoArraySyntax", msg: `{"name": "str"}`, msgCount: 1, errExpected: false},
+		{name: "OneMessageNoArraySyntaxWhiteSpaces", msg: `
+{"name": "str"}
+`, msgCount: 1, errExpected: false},
+		{name: "MultipleMessages", msg: `[{"name": "str1"},{"name": "str2"}]`, msgCount: 2, errExpected: false},
+		{name: "InvalidSyntax", msg: `[{"name": "str1"}`, errExpected: true},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			res, err := toJSONArray([]byte(c.msg))
+			if c.errExpected && err == nil {
+				t.Error("json error expected, got nil")
+				return
+			}
+			if !c.errExpected && err != nil {
+				t.Errorf("no json error expected, got %v", err)
+				return
+			}
+
+			if len(res) != c.msgCount {
+				t.Errorf("expected %d messages, got %d", c.msgCount, len(res))
+			}
+		})
+	}
 }
 
 func checkStats(t *testing.T, app *app, msg []byte) {

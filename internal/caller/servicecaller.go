@@ -143,6 +143,50 @@ func (sc *ServiceCaller) CallServerStream(ctx context.Context, serviceTarget str
 	return result, errChan
 }
 
+func (sc *ServiceCaller) CallClientStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, reqJSON [][]byte, callOpts ...grpc.CallOption) ([]byte, error) {
+	if len(reqJSON) == 0 {
+		return nil, newCallerError(errors.New("empty requests are not allowed"))
+	}
+
+	conn, err := sc.getConn(serviceTarget)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := dynamic.NewMessage(methodDesc.GetOutputType())
+	stub := grpcdynamic.NewStub(conn)
+	stream, err := stub.InvokeRpcClientStream(ctx, methodDesc, callOpts...)
+	if err != nil {
+		return nil, newCallerError(err)
+	}
+
+	for _, reqMsg := range reqJSON {
+		msg := dynamic.NewMessage(methodDesc.GetInputType())
+
+		err := msg.UnmarshalJSON(reqMsg)
+		if err != nil {
+			return nil, newCallerError(errors.Wrap(err, "invalid input json"))
+		}
+
+		err = stream.SendMsg(msg)
+		if err != nil {
+			return nil, newCallerError(err)
+		}
+	}
+
+	protoRes, err := stream.CloseAndReceive()
+	if err != nil {
+		return nil, newCallerError(err)
+	}
+
+	err = resp.ConvertFrom(protoRes)
+	if err != nil {
+		return nil, err
+	}
+
+	return sc.marshalMessage(resp)
+}
+
 func (sc *ServiceCaller) getConn(target string) (*grpc.ClientConn, error) {
 	conn, err := sc.connFact.GetConn(target)
 	if err != nil {

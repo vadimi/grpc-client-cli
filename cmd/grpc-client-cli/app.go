@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,16 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoprint"
-	"github.com/jhump/protoreflect/dynamic"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
 	survey "gopkg.in/AlecAivazis/survey.v1"
 	"gopkg.in/AlecAivazis/survey.v1/core"
-	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 var (
@@ -127,23 +125,42 @@ func (a *app) Close() error {
 
 func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 	for {
+		buf := newMsgBuffer(&msgBufferOptions{
+			reader:      a.messageReader,
+			messageDesc: method.GetInputType(),
+		})
+
 		var err error
+		var messages [][]byte
 		selectedMsg := message
 		if len(selectedMsg) == 0 {
-			selectedMsg, err = a.selectMessage(method.GetInputType())
-			if err != nil {
-				return err
+			if method.IsClientStreaming() {
+				messages, err = buf.ReadMessages()
+			} else {
+				selectedMsg, err = buf.ReadMessage()
 			}
+		} else if method.IsClientStreaming() {
+			messages, err = toJSONArray(message)
+		}
+
+		if err != nil {
+			return err
 		}
 
 		callTimeout := time.Duration(a.opts.Deadline) * time.Second
 		ctx, cancel := context.WithTimeout(rpc.WithStatsCtx(context.Background()), callTimeout)
-		if method.IsServerStreaming() && !method.IsClientStreaming() {
-			err = a.callServerStream(ctx, method, selectedMsg)
-		} else if !method.IsServerStreaming() && !method.IsClientStreaming() {
-			err = a.callUnary(ctx, method, selectedMsg)
+		if method.IsServerStreaming() {
+			if method.IsClientStreaming() {
+				err = errors.New("bi-directional streaming is not supported")
+			} else {
+				err = a.callServerStream(ctx, method, selectedMsg)
+			}
 		} else {
-			err = errors.New("client/bi-directional streaming is not supported")
+			if method.IsClientStreaming() {
+				err = a.callClientStream(ctx, method, messages)
+			} else {
+				err = a.callUnary(ctx, method, selectedMsg)
+			}
 		}
 
 		if err != nil {
@@ -155,11 +172,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 		}
 
 		if a.opts.Verbose {
-			s := rpc.ExtractRpcStats(ctx)
-			fmt.Fprintln(a.w)
-			fmt.Fprintln(a.w, "Request duration:", s.Duration)
-			fmt.Fprintf(a.w, "Request size: %d bytes\n", s.ReqSize)
-			fmt.Fprintf(a.w, "Response size: %d bytes\n", s.RespSize)
+			a.printVerboseOutput(ctx)
 		}
 
 		// if we pass a single message, return
@@ -179,10 +192,27 @@ func (a *app) callUnary(ctx context.Context, method *desc.MethodDescriptor, mess
 		return err
 	}
 
-	re := regexp.MustCompile(`\[\s*?\]`) // collapse empty array to one line
-	fmt.Fprintf(a.w, "%s\n", re.ReplaceAll(result, []byte("[]")))
+	a.printResult(result)
 
 	return nil
+}
+
+func (a *app) callClientStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
+	serviceCaller := caller.NewServiceCaller(a.connFact)
+
+	result, err := serviceCaller.CallClientStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
+	if err != nil {
+		return err
+	}
+
+	a.printResult(result)
+
+	return nil
+}
+
+func (a *app) printResult(r []byte) {
+	re := regexp.MustCompile(`\[\s*?\]`) // collapse empty array to one line
+	fmt.Fprintf(a.w, "%s\n", re.ReplaceAll(r, []byte("[]")))
 }
 
 func (a *app) callServerStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON []byte) error {
@@ -284,33 +314,6 @@ func (a *app) selectMethod(s *caller.ServiceMeta, name string) (*desc.MethodDesc
 	return nil, errors.New("method not found")
 }
 
-func (a *app) selectMessage(messageDesc *desc.MessageDescriptor) ([]byte, error) {
-	fieldNames := a.getFieldNames(messageDesc)
-	for {
-		message, err := a.messageReader.ReadLine(fieldNames)
-		if err != nil {
-			if err == terminal.InterruptErr {
-				return nil, terminal.InterruptErr
-			}
-			return message, err
-		}
-
-		normMsg := bytes.TrimSpace(message)
-		if len(normMsg) > 0 {
-			if bytes.Equal(normMsg, []byte("?")) {
-				msg := dynamic.NewMessage(messageDesc)
-				msgJSON, _ := msg.MarshalJSONPB(&jsonpb.Marshaler{
-					EmitDefaults: true,
-					OrigName:     true,
-				})
-				fmt.Println(string(msgJSON))
-				continue
-			}
-			return normMsg, nil
-		}
-	}
-}
-
 func (a *app) getService(serviceName string) *caller.ServiceMeta {
 	for _, s := range a.servicesList {
 		if s.Name == serviceName {
@@ -321,19 +324,36 @@ func (a *app) getService(serviceName string) *caller.ServiceMeta {
 	return nil
 }
 
-func (a *app) getFieldNames(messageDesc *desc.MessageDescriptor) []string {
-	fields := map[string]struct{}{}
+func (a *app) printVerboseOutput(ctx context.Context) {
+	s := rpc.ExtractRpcStats(ctx)
+	fmt.Fprintln(a.w)
+	fmt.Fprintln(a.w, "Request duration:", s.Duration)
+	fmt.Fprintf(a.w, "Request size: %d bytes\n", s.ReqSize)
+	fmt.Fprintf(a.w, "Response size: %d bytes\n", s.RespSize)
+}
 
-	walker := caller.NewFieldWalker()
-	walker.Walk(messageDesc, func(f *desc.FieldDescriptor) {
-		fields[f.GetName()] = struct{}{}
-	})
-
-	names := make([]string, 0, len(fields))
-	for f := range fields {
-		names = append(names, f)
+func toJSONArray(msg []byte) ([][]byte, error) {
+	var jsArr []json.RawMessage
+	var err error
+	nmsg := bytes.TrimSpace(msg)
+	if nmsg[0] == byte('{') {
+		var js json.RawMessage
+		err = json.Unmarshal(nmsg, &js)
+		if err == nil {
+			jsArr = append(jsArr, js)
+		}
+	} else {
+		err = json.Unmarshal(nmsg, &jsArr)
 	}
 
-	sort.Strings(names)
-	return names
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([][]byte, len(jsArr))
+	for i := range jsArr {
+		result[i] = jsArr[i]
+	}
+
+	return result, nil
 }
