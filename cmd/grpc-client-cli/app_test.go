@@ -88,9 +88,9 @@ func appCallUnaryServerError(t *testing.T, app *app) {
 }
 `
 
-	msg := fmt.Sprintf(msgTmpl, errCode)
+	msg := []byte(fmt.Sprintf(msgTmpl, errCode))
 
-	err := app.callUnary(context.Background(), m, []byte(msg))
+	err := app.callClientStream(context.Background(), m, [][]byte{msg})
 	if err == nil {
 		t.Error("error expected, got nil")
 		return
@@ -120,9 +120,9 @@ func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
 }
 `
 
-	msg := fmt.Sprintf(msgTmpl, payloadType, body)
+	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, body))
 
-	err := app.callUnary(context.Background(), m, []byte(msg))
+	err := app.callClientStream(context.Background(), m, [][]byte{msg})
 	if err != nil {
 		t.Errorf("error executing callUnary(): %v", err)
 		return
@@ -175,9 +175,9 @@ func appCallStreamOutput(t *testing.T, app *app, buf *bytes.Buffer) {
 		return base64.StdEncoding.EncodeToString([]byte(body))
 	}
 
-	msg := fmt.Sprintf(msgTmpl, payloadType, getEncBody(1), respSize1, respSize2)
+	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, getEncBody(1), respSize1, respSize2))
 
-	err := app.callServerStream(context.Background(), m, []byte(msg))
+	err := app.callStream(context.Background(), m, [][]byte{msg})
 	if err != nil {
 		t.Errorf("error executing callUnary(): %v", err)
 		return
@@ -223,7 +223,7 @@ func appCallStreamOutputError(t *testing.T, app *app) {
 
 	msg := fmt.Sprintf(msgTmpl, errCode)
 
-	err := app.callServerStream(context.Background(), m, []byte(msg))
+	err := app.callStream(context.Background(), m, [][]byte{[]byte(msg)})
 	if err == nil {
 		t.Error("error expected, got nil")
 		return
@@ -444,7 +444,7 @@ func checkStats(t *testing.T, app *app, msg []byte) {
 	ctx, cancel := context.WithTimeout(rpc.WithStatsCtx(context.Background()), callTimeout)
 	defer cancel()
 
-	err := app.callUnary(ctx, m, []byte(msg))
+	err := app.callClientStream(ctx, m, [][]byte{msg})
 	if err != nil {
 		t.Error(err)
 		return

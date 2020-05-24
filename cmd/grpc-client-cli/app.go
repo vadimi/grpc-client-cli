@@ -132,15 +132,20 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 
 		var err error
 		var messages [][]byte
-		selectedMsg := message
-		if len(selectedMsg) == 0 {
+		if len(message) == 0 {
 			if method.IsClientStreaming() {
 				messages, err = buf.ReadMessages()
 			} else {
-				selectedMsg, err = buf.ReadMessage()
+				var m []byte
+				m, err = buf.ReadMessage()
+				messages = append(messages, m)
 			}
-		} else if method.IsClientStreaming() {
-			messages, err = toJSONArray(message)
+		} else {
+			if method.IsClientStreaming() {
+				messages, err = toJSONArray(message)
+			} else {
+				messages = append(messages, message)
+			}
 		}
 
 		if err != nil {
@@ -150,17 +155,9 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 		callTimeout := time.Duration(a.opts.Deadline) * time.Second
 		ctx, cancel := context.WithTimeout(rpc.WithStatsCtx(context.Background()), callTimeout)
 		if method.IsServerStreaming() {
-			if method.IsClientStreaming() {
-				err = errors.New("bi-directional streaming is not supported")
-			} else {
-				err = a.callServerStream(ctx, method, selectedMsg)
-			}
+			err = a.callStream(ctx, method, messages)
 		} else {
-			if method.IsClientStreaming() {
-				err = a.callClientStream(ctx, method, messages)
-			} else {
-				err = a.callUnary(ctx, method, selectedMsg)
-			}
+			err = a.callClientStream(ctx, method, messages)
 		}
 
 		if err != nil {
@@ -184,19 +181,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 	}
 }
 
-func (a *app) callUnary(ctx context.Context, method *desc.MethodDescriptor, messageJSON []byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact)
-
-	result, err := serviceCaller.CallJSON(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
-	if err != nil {
-		return err
-	}
-
-	a.printResult(result)
-
-	return nil
-}
-
+// callClientStream calls unary or client stream method
 func (a *app) callClientStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
 	serviceCaller := caller.NewServiceCaller(a.connFact)
 
@@ -215,9 +200,10 @@ func (a *app) printResult(r []byte) {
 	fmt.Fprintf(a.w, "%s\n", re.ReplaceAll(r, []byte("[]")))
 }
 
-func (a *app) callServerStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON []byte) error {
+// callStream calls both server or bi-directional stream methods
+func (a *app) callStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
 	serviceCaller := caller.NewServiceCaller(a.connFact)
-	result, errChan := serviceCaller.CallServerStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
+	result, errChan := serviceCaller.CallStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 
 	fmt.Fprint(a.w, "[")
 	cnt := 0
