@@ -96,10 +96,85 @@ func (testService) StreamingInputCall(str grpc_testing.TestService_StreamingInpu
 }
 
 func (testService) FullDuplexCall(str grpc_testing.TestService_FullDuplexCallServer) error {
-	return nil
+	exitCode := extractStatusCodes(str.Context())
+	if exitCode != codes.OK {
+		return status.Error(exitCode, "error")
+	}
+
+	for {
+		req, err := str.Recv()
+		if err == io.EOF {
+			return nil
+		}
+
+		if err != nil {
+			return status.Error(codes.Internal, err.Error())
+		}
+
+		if req.ResponseStatus != nil && req.ResponseStatus.Code != int32(codes.OK) {
+			return status.Error(codes.Code(req.ResponseStatus.Code), "error")
+
+		}
+
+		resp := &grpc_testing.StreamingOutputCallResponse{Payload: &grpc_testing.Payload{}}
+		for _, param := range req.ResponseParameters {
+			if str.Context().Err() != nil {
+				return str.Context().Err()
+			}
+
+			respSize := len(req.GetPayload().GetBody()) * int(param.GetSize())
+			buf := make([]byte, 0, respSize)
+			for i := 0; i < int(param.GetSize()); i++ {
+				buf = append(buf, req.GetPayload().GetBody()...)
+			}
+
+			resp.Payload.Type = req.ResponseType
+			resp.Payload.Body = buf
+
+			if err := str.Send(resp); err != nil {
+				return err
+			}
+		}
+	}
 }
 
 func (testService) HalfDuplexCall(str grpc_testing.TestService_HalfDuplexCallServer) error {
+	requests := []*grpc_testing.StreamingOutputCallRequest{}
+	for {
+		req, err := str.Recv()
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return status.Error(codes.Internal, err.Error())
+		}
+
+		requests = append(requests, req)
+	}
+
+	for _, req := range requests {
+		resp := &grpc_testing.StreamingOutputCallResponse{Payload: &grpc_testing.Payload{}}
+		for _, param := range req.ResponseParameters {
+			if str.Context().Err() != nil {
+				return str.Context().Err()
+			}
+
+			respSize := len(req.GetPayload().GetBody()) * int(param.GetSize())
+			buf := make([]byte, 0, respSize)
+			for i := 0; i < int(param.GetSize()); i++ {
+				buf = append(buf, req.GetPayload().GetBody()...)
+			}
+
+			resp.Payload.Type = req.ResponseType
+			resp.Payload.Body = buf
+
+			if err := str.Send(resp); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
