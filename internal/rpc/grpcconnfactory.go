@@ -1,6 +1,9 @@
 package rpc
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
 	"log"
 	"strings"
 	"sync"
@@ -11,6 +14,7 @@ import (
 	"github.com/vadimi/grpc-client-cli/internal/resolver/eureka"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer/roundrobin"
+	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // register gzip compressor
 	"google.golang.org/grpc/resolver"
 )
@@ -27,8 +31,17 @@ type connMeta struct {
 	dialErr error
 }
 
+type GrpcConnFactorySettings struct {
+	tls      bool
+	insecure bool
+	caCert   string
+	cert     string
+	certKey  string
+}
+
 type GrpcConnFactory struct {
-	conns struct {
+	settings *GrpcConnFactorySettings
+	conns    struct {
 		sync.Mutex
 		cache map[string]*connMeta
 	}
@@ -36,8 +49,27 @@ type GrpcConnFactory struct {
 
 type dialFunc func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error)
 
-func NewGrpcConnFactory() *GrpcConnFactory {
-	f := &GrpcConnFactory{}
+type ConnFactoryOption func(*GrpcConnFactorySettings)
+
+func WithConnCred(insecure bool, caCert string, cert string, certKey string) ConnFactoryOption {
+	return func(s *GrpcConnFactorySettings) {
+		s.tls = true
+		s.caCert = caCert
+		s.cert = cert
+		s.certKey = certKey
+	}
+}
+
+func NewGrpcConnFactory(opts ...ConnFactoryOption) *GrpcConnFactory {
+	settings := &GrpcConnFactorySettings{}
+
+	for _, o := range opts {
+		o(settings)
+	}
+
+	f := &GrpcConnFactory{
+		settings: settings,
+	}
 	f.conns.cache = map[string]*connMeta{}
 	return f
 }
@@ -70,17 +102,31 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 	conn.Do(func() {
 		opts := append(opts,
 			grpc.WithDisableServiceConfig(),
-			grpc.WithInsecure(),
 			grpc.WithBalancerName(roundrobin.Name),
 			grpc.WithStatsHandler(newStatsHanler()),
 		)
 
 		svcTarget := connOpts.Host
 
-		// if we have a proxy use it as our service target and pass original target to :authority header
-		if connOpts.Authority != "" {
-			svcTarget = connOpts.Authority
-			opts = append(opts, grpc.WithAuthority(connOpts.Host))
+		if !f.settings.tls {
+			opts = append(opts, grpc.WithInsecure())
+
+			// if we have a proxy use it as our service target and pass original target to :authority header
+			// override authority for non TLS connection only
+			if connOpts.Authority != "" {
+				svcTarget = connOpts.Authority
+				opts = append(opts, grpc.WithAuthority(connOpts.Host))
+			}
+		} else {
+			creds, err := getCredentials(f.settings.insecure, f.settings.caCert, f.settings.cert, f.settings.certKey)
+			if err != nil {
+				conn.dialErr = err
+				return
+			}
+			if connOpts.Authority != "" {
+				creds.OverrideServerName(connOpts.Authority)
+			}
+			opts = append(opts, grpc.WithTransportCredentials(creds))
 		}
 
 		unaryInterceptors := []grpc.UnaryClientInterceptor{}
@@ -143,4 +189,33 @@ func (f *GrpcConnFactory) CloseConn(target string) error {
 		delete(f.conns.cache, connOpts.Host)
 	}
 	return err
+}
+
+func getCredentials(insecure bool, caCert, cert, certKey string) (credentials.TransportCredentials, error) {
+	var tlsCfg tls.Config
+	if insecure {
+		tlsCfg.InsecureSkipVerify = true
+	} else if caCert != "" {
+		b, err := ioutil.ReadFile(caCert)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read the CA certificate")
+		}
+		cp := x509.NewCertPool()
+		if !cp.AppendCertsFromPEM(b) {
+			return nil, errors.New("failed to append the client certificate")
+		}
+		tlsCfg.RootCAs = cp
+	}
+
+	if cert != "" && certKey != "" {
+		certificate, err := tls.LoadX509KeyPair(cert, certKey)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read the client certificate")
+		}
+		tlsCfg.Certificates = append(tlsCfg.Certificates, certificate)
+	} else if cert != "" || certKey != "" {
+		return nil, errors.New("both cert and certKey need to be specified")
+	}
+
+	return credentials.NewTLS(&tlsCfg), nil
 }

@@ -49,6 +49,31 @@ func main() {
 			Aliases: []string{"V"},
 			Usage:   "output some additional information like request time and message size",
 		},
+		&cli.BoolFlag{
+			Name:  "tls",
+			Value: false,
+			Usage: "use TLS when connecting to grpc server",
+		},
+		&cli.BoolFlag{
+			Name:  "insecure",
+			Value: false,
+			Usage: "skip server's certificate chain and host name verification, this option should only be used for testing",
+		},
+		&cli.StringFlag{
+			Name:  "cacert",
+			Value: "",
+			Usage: "the CA certificate file for verifying the server, this certificate is ignored if -insecure option is true",
+		},
+		&cli.StringFlag{
+			Name:  "cert",
+			Value: "",
+			Usage: "client certificate to present to the server, only valid with -certkey option",
+		},
+		&cli.StringFlag{
+			Name:  "certkey",
+			Value: "",
+			Usage: "client private key, only valid with -cert option",
+		},
 	}
 
 	app.Action = baseCmd
@@ -102,6 +127,11 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.Deadline = c.Int("deadline")
 	opts.Verbose = c.Bool("verbose")
 	opts.Target = target
+	opts.TLS = c.Bool("tls")
+	opts.Insecure = c.Bool("insecure")
+	opts.CACert = c.String("cacert")
+	opts.Cert = c.String("cert")
+	opts.CertKey = c.String("certkey")
 
 	input := c.String("input")
 
