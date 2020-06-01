@@ -2,14 +2,19 @@ package testing
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"net"
 	"strconv"
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
@@ -23,8 +28,16 @@ const (
 	MethodExitCode = "exit-code"
 )
 
-var testServerAddr = ""
-var testGrpcServer *grpc.Server
+var (
+	testServerAddr = ""
+	testGrpcServer *grpc.Server
+
+	testServerTLSAddr = ""
+	testGrpcTLSServer *grpc.Server
+
+	testServerMTLSAddr = ""
+	testGrpcMTLSServer *grpc.Server
+)
 
 type testService struct{}
 
@@ -179,40 +192,80 @@ func (testService) HalfDuplexCall(str grpc_testing.TestService_HalfDuplexCallSer
 }
 
 func SetupTestServer() error {
-	testGrpcServer = grpc.NewServer()
-	testSvc := &testService{}
-	grpc_testing.RegisterTestServiceServer(testGrpcServer, testSvc)
-	healthpb.RegisterHealthServer(testGrpcServer, &healthService{})
-	reflection.Register(testGrpcServer)
-
-	port := 0
-	if l, err := net.Listen("tcp", "127.0.0.1:0"); err != nil {
-		return err
-	} else {
-		port = l.Addr().(*net.TCPAddr).Port
-		go testGrpcServer.Serve(l)
+	var err error
+	testGrpcServer, testServerAddr, err = setupTestServer()
+	if err != nil {
+		return nil
 	}
 
-	testServerAddr = fmt.Sprintf("127.0.0.1:%d", port)
+	// no mTLS
+	creds, err := getCreds(false)
+	if err != nil {
+		return err
+	}
+
+	testGrpcTLSServer, testServerTLSAddr, err = setupTestServer(creds)
+
+	// mTLS
+	mTLSCreds, err := getCreds(true)
+	if err != nil {
+		return err
+	}
+
+	testGrpcMTLSServer, testServerMTLSAddr, err = setupTestServer(mTLSCreds)
 
 	return nil
 }
 
+func setupTestServer(opts ...grpc.ServerOption) (*grpc.Server, string, error) {
+	server := grpc.NewServer(opts...)
+	testSvc := &testService{}
+	grpc_testing.RegisterTestServiceServer(server, testSvc)
+	healthpb.RegisterHealthServer(server, &healthService{})
+	reflection.Register(server)
+
+	port := 0
+	if l, err := net.Listen("tcp", "127.0.0.1:0"); err != nil {
+		return nil, "", err
+	} else {
+		port = l.Addr().(*net.TCPAddr).Port
+		go server.Serve(l)
+	}
+
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+
+	return server, addr, nil
+}
+
 func StopTestServer() {
-	if testGrpcServer == nil {
+	stopTestServer(testGrpcServer)
+	stopTestServer(testGrpcTLSServer)
+	stopTestServer(testGrpcMTLSServer)
+}
+
+func stopTestServer(s *grpc.Server) {
+	if s == nil {
 		return
 	}
 
 	timer := time.AfterFunc(time.Duration(15*time.Second), func() {
-		testGrpcServer.Stop()
+		s.Stop()
 	})
 	defer timer.Stop()
-	testGrpcServer.GracefulStop()
+	s.GracefulStop()
 
 }
 
 func TestServerAddr() string {
 	return testServerAddr
+}
+
+func TestServerTLSAddr() string {
+	return testServerTLSAddr
+}
+
+func TestServerMTLSAddr() string {
+	return testServerMTLSAddr
 }
 
 func TestServerInstance() *grpc.Server {
@@ -235,4 +288,39 @@ func extractStatusCodes(ctx context.Context) codes.Code {
 		return codes.OK
 	}
 	return codes.Code(i)
+}
+
+func getCreds(mTLS bool) (grpc.ServerOption, error) {
+	certificate, err := tls.LoadX509KeyPair(
+		"../../testdata/certs/test_server.crt",
+		"../../testdata/certs/test_server.key",
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	certPool := x509.NewCertPool()
+	bs, err := ioutil.ReadFile("../../testdata/certs/test_ca.crt")
+	if err != nil {
+		log.Fatalf("failed to read client ca cert: %s", err)
+	}
+
+	ok := certPool.AppendCertsFromPEM(bs)
+	if !ok {
+		log.Fatal("failed to append client certs")
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{certificate},
+		ClientCAs:    certPool,
+	}
+
+	if mTLS {
+		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+	}
+
+	serverOption := grpc.Creds(credentials.NewTLS(tlsConfig))
+
+	return serverOption, nil
 }
