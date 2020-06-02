@@ -1,6 +1,7 @@
 package caller
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/golang/protobuf/jsonpb"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
-	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
 )
 
 type temporary interface {
@@ -57,61 +57,34 @@ func NewServiceCaller(connFact *rpc.GrpcConnFactory) *ServiceCaller {
 	return &ServiceCaller{connFact}
 }
 
-func (sc *ServiceCaller) CallJSON(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, reqJSON []byte, callOpts ...grpc.CallOption) ([]byte, error) {
-	msg := dynamic.NewMessage(methodDesc.GetInputType())
-
-	err := msg.UnmarshalJSON(reqJSON)
-	if err != nil {
-		return nil, newCallerError(errors.Wrap(err, "invalid input json"))
-	}
-
-	conn, err := sc.getConn(serviceTarget)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := dynamic.NewMessage(methodDesc.GetOutputType())
-	stub := grpcdynamic.NewStub(conn)
-	protoRes, err := stub.InvokeRpc(ctx, methodDesc, msg, callOpts...)
-	if err != nil {
-		return nil, newCallerError(err)
-	}
-
-	err = resp.ConvertFrom(protoRes)
-	if err != nil {
-		return nil, err
-	}
-
-	return sc.marshalMessage(resp)
-}
-
-func (sc *ServiceCaller) CallServerStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, reqJSON []byte, callOpts ...grpc.CallOption) (chan []byte, chan error) {
-	msg := dynamic.NewMessage(methodDesc.GetInputType())
+func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, reqJSON [][]byte, callOpts ...grpc.CallOption) (chan []byte, chan error) {
 	errChan := make(chan error, 1)
-
-	err := msg.UnmarshalJSON(reqJSON)
-	if err != nil {
-		errChan <- newCallerError(errors.Wrap(err, "invalid input json"))
-		return nil, errChan
-	}
-
 	conn, err := sc.getConn(serviceTarget)
-	if err != nil {
-		return nil, errChan
-	}
-
-	result := make(chan []byte)
-	resp := dynamic.NewMessage(methodDesc.GetOutputType())
-	stub := grpcdynamic.NewStub(conn)
-	stream, err := stub.InvokeRpcServerStream(ctx, methodDesc, msg, callOpts...)
 	if err != nil {
 		errChan <- newCallerError(err)
 		return nil, errChan
 	}
 
+	sd := grpc.StreamDesc{
+		StreamName:    methodDesc.GetName(),
+		ServerStreams: methodDesc.IsServerStreaming(),
+		ClientStreams: methodDesc.IsClientStreaming(),
+	}
+
+	// fully qualified method name is needed here
+	methodName := fmt.Sprintf("/%s/%s", methodDesc.GetService().GetFullyQualifiedName(), methodDesc.GetName())
+	stream, err := conn.NewStream(ctx, &sd, methodName, callOpts...)
+	if err != nil {
+		errChan <- newCallerError(err)
+		return nil, errChan
+	}
+
+	result := make(chan []byte)
+
 	go func() {
 		for {
-			m, err := stream.RecvMsg()
+			m := dynamic.NewMessage(methodDesc.GetOutputType())
+			err := stream.RecvMsg(m)
 			if err != nil {
 				if err != io.EOF {
 					errChan <- newCallerError(err)
@@ -123,14 +96,7 @@ func (sc *ServiceCaller) CallServerStream(ctx context.Context, serviceTarget str
 				break
 			}
 
-			err = resp.ConvertFrom(m)
-			if err != nil {
-				errChan <- err
-				close(result)
-				break
-			}
-
-			json, err := sc.marshalMessage(resp)
+			json, err := sc.marshalMessage(m)
 			if err != nil {
 				errChan <- err
 				close(result)
@@ -140,51 +106,48 @@ func (sc *ServiceCaller) CallServerStream(ctx context.Context, serviceTarget str
 		}
 	}()
 
-	return result, errChan
-}
-
-func (sc *ServiceCaller) CallClientStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, reqJSON [][]byte, callOpts ...grpc.CallOption) ([]byte, error) {
-	if len(reqJSON) == 0 {
-		return nil, newCallerError(errors.New("empty requests are not allowed"))
-	}
-
-	conn, err := sc.getConn(serviceTarget)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := dynamic.NewMessage(methodDesc.GetOutputType())
-	stub := grpcdynamic.NewStub(conn)
-	stream, err := stub.InvokeRpcClientStream(ctx, methodDesc, callOpts...)
-	if err != nil {
-		return nil, newCallerError(err)
-	}
-
 	for _, reqMsg := range reqJSON {
 		msg := dynamic.NewMessage(methodDesc.GetInputType())
 
 		err := msg.UnmarshalJSON(reqMsg)
 		if err != nil {
-			return nil, newCallerError(errors.Wrap(err, "invalid input json"))
+			errChan <- newCallerError(errors.Wrap(err, "invalid input json"))
+			return nil, errChan
 		}
 
 		err = stream.SendMsg(msg)
 		if err != nil {
-			return nil, newCallerError(err)
+			errChan <- newCallerError(err)
+			return nil, errChan
+		}
+
+	}
+
+	if err := stream.CloseSend(); err != nil {
+		errChan <- newCallerError(err)
+	}
+
+	return result, errChan
+}
+
+// CallClientStream allows calling unary or client stream methods as they both return only a single result
+func (sc *ServiceCaller) CallClientStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, reqJSON [][]byte, callOpts ...grpc.CallOption) ([]byte, error) {
+	if len(reqJSON) == 0 {
+		return nil, newCallerError(errors.New("empty requests are not allowed"))
+	}
+
+	resultCh, errChan := sc.CallStream(ctx, serviceTarget, methodDesc, reqJSON, callOpts...)
+	var result []byte
+	for {
+		select {
+		case r := <-resultCh:
+			if r != nil {
+				result = r
+			}
+		case err := <-errChan:
+			return result, err
 		}
 	}
-
-	protoRes, err := stream.CloseAndReceive()
-	if err != nil {
-		return nil, newCallerError(err)
-	}
-
-	err = resp.ConvertFrom(protoRes)
-	if err != nil {
-		return nil, err
-	}
-
-	return sc.marshalMessage(resp)
 }
 
 func (sc *ServiceCaller) getConn(target string) (*grpc.ClientConn, error) {

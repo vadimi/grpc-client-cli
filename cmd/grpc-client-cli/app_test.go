@@ -68,7 +68,28 @@ func TestAppServiceCalls(t *testing.T) {
 	})
 
 	t.Run("appCallClientStreamError", func(t *testing.T) {
+		buf.Reset()
 		appCallClientStreamError(t, app)
+	})
+
+	t.Run("appCallFullDuplexBidiStream", func(t *testing.T) {
+		buf.Reset()
+		appCallBidiStream(t, app, buf, "FullDuplexCall")
+	})
+
+	t.Run("appCallFullDuplexBidiStreamError", func(t *testing.T) {
+		buf.Reset()
+		appCallBidiStreamError(t, app, buf)
+	})
+
+	t.Run("appCallFullDuplexBidiStreamErrorProcessing", func(t *testing.T) {
+		buf.Reset()
+		appCallBidiStreamErrorProcessing(t, app, buf)
+	})
+
+	t.Run("appCallHalfDuplexBidiStream", func(t *testing.T) {
+		buf.Reset()
+		appCallBidiStream(t, app, buf, "HalfDuplexCall")
 	})
 }
 
@@ -88,9 +109,9 @@ func appCallUnaryServerError(t *testing.T, app *app) {
 }
 `
 
-	msg := fmt.Sprintf(msgTmpl, errCode)
+	msg := []byte(fmt.Sprintf(msgTmpl, errCode))
 
-	err := app.callUnary(context.Background(), m, []byte(msg))
+	err := app.callClientStream(context.Background(), m, [][]byte{msg})
 	if err == nil {
 		t.Error("error expected, got nil")
 		return
@@ -120,11 +141,11 @@ func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
 }
 `
 
-	msg := fmt.Sprintf(msgTmpl, payloadType, body)
+	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, body))
 
-	err := app.callUnary(context.Background(), m, []byte(msg))
+	err := app.callClientStream(context.Background(), m, [][]byte{msg})
 	if err != nil {
-		t.Errorf("error executing callUnary(): %v", err)
+		t.Errorf("error executing callClientStream(): %v", err)
 		return
 	}
 
@@ -175,11 +196,11 @@ func appCallStreamOutput(t *testing.T, app *app, buf *bytes.Buffer) {
 		return base64.StdEncoding.EncodeToString([]byte(body))
 	}
 
-	msg := fmt.Sprintf(msgTmpl, payloadType, getEncBody(1), respSize1, respSize2)
+	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, getEncBody(1), respSize1, respSize2))
 
-	err := app.callServerStream(context.Background(), m, []byte(msg))
+	err := app.callStream(context.Background(), m, [][]byte{msg})
 	if err != nil {
-		t.Errorf("error executing callUnary(): %v", err)
+		t.Errorf("error executing callStream(): %v", err)
 		return
 	}
 
@@ -205,6 +226,191 @@ func appCallStreamOutput(t *testing.T, app *app, buf *bytes.Buffer) {
 	}
 }
 
+func appCallBidiStreamErrorProcessing(t *testing.T, app *app, buf *bytes.Buffer) {
+	m, ok := findMethod(t, app, "grpc.testing.TestService", "FullDuplexCall")
+	if !ok {
+		return
+	}
+
+	errCode := int32(codes.Aborted)
+	respSize1 := 3
+	respSize2 := 5
+	payloadType := "UNCOMPRESSABLE"
+	bodyText := "testBody"
+
+	msgTmpl := `
+{
+  "payload": {
+    "type": "%s",
+    "body": "%s"
+  },
+  "response_parameters": [{
+    "size": %d
+  },{
+    "size": %d
+  }]
+}
+`
+
+	msgTmplErr := `
+{
+  "response_status": {
+    "code": %d
+  }
+}
+`
+
+	getEncBody := func(c int) string {
+		body := strings.Repeat(bodyText, c)
+		return base64.StdEncoding.EncodeToString([]byte(body))
+	}
+
+	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, getEncBody(1), respSize1, respSize2))
+	msgErr := []byte(fmt.Sprintf(msgTmplErr, errCode))
+
+	messages := [][]byte{msg, msgErr}
+	err := app.callStream(context.Background(), m, messages)
+	if err == nil {
+		t.Error("error expected, got nil")
+		return
+	}
+
+	s, _ := status.FromError(errors.Cause(err))
+	if s.Code() != codes.Code(errCode) {
+		t.Errorf("expectd status code %v, got %v", codes.Code(errCode), s.Code())
+		return
+	}
+
+	res := buf.Bytes()
+	root, err := ajson.Unmarshal(res)
+	if err != nil {
+		t.Errorf("error unmarshaling result json: %v", err)
+		return
+	}
+
+	if len(root.MustArray()) < 2 {
+		t.Errorf("expected %d elements, got %d", 2, len(root.MustArray()))
+		return
+	}
+}
+
+func appCallBidiStreamError(t *testing.T, app *app, buf *bytes.Buffer) {
+	m, ok := findMethod(t, app, "grpc.testing.TestService", "FullDuplexCall")
+	if !ok {
+		return
+	}
+
+	errCode := int32(codes.Internal)
+	respSize1 := 3
+	respSize2 := 5
+	payloadType := "UNCOMPRESSABLE"
+	bodyText := "testBody"
+
+	msgTmpl := `
+{
+  "payload": {
+    "type": "%s",
+    "body": "%s"
+  },
+  "response_parameters": [{
+    "size": %d
+  },{
+    "size": %d
+  }]
+}
+`
+
+	getEncBody := func(c int) string {
+		body := strings.Repeat(bodyText, c)
+		return base64.StdEncoding.EncodeToString([]byte(body))
+	}
+
+	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, getEncBody(1), respSize1, respSize2))
+
+	ctx := metadata.AppendToOutgoingContext(context.Background(), app_testing.MethodExitCode, fmt.Sprintf("%d", errCode))
+	messages := [][]byte{msg, msg}
+	err := app.callStream(ctx, m, messages)
+	if err == nil {
+		t.Error("error expected, got nil")
+		return
+	}
+
+	s, _ := status.FromError(errors.Cause(err))
+	if s.Code() != codes.Code(errCode) {
+		t.Errorf("expectd status code %v, got %v", codes.Code(errCode), s.Code())
+		return
+	}
+
+	resp := strings.TrimSpace(buf.String())
+	if resp != "[]" {
+		t.Errorf("expected `[]` response, got %s", resp)
+	}
+}
+
+func appCallBidiStream(t *testing.T, app *app, buf *bytes.Buffer, methodName string) {
+	m, ok := findMethod(t, app, "grpc.testing.TestService", methodName)
+	if !ok {
+		return
+	}
+
+	respSize1 := 3
+	respSize2 := 5
+	payloadType := "UNCOMPRESSABLE"
+	bodyText := "testBody"
+
+	msgTmpl := `
+{
+  "payload": {
+    "type": "%s",
+    "body": "%s"
+  },
+  "response_parameters": [{
+    "size": %d
+  },{
+    "size": %d
+  }]
+}
+`
+
+	getEncBody := func(c int) string {
+		body := strings.Repeat(bodyText, c)
+		return base64.StdEncoding.EncodeToString([]byte(body))
+	}
+
+	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, getEncBody(1), respSize1, respSize2))
+
+	messages := [][]byte{msg, msg}
+	err := app.callStream(context.Background(), m, messages)
+	if err != nil {
+		t.Errorf("error executing callStream(): %v", err)
+		return
+	}
+
+	res := buf.Bytes()
+	root, err := ajson.Unmarshal(res)
+	if err != nil {
+		t.Errorf("error unmarshaling result json: %v", err)
+		return
+	}
+
+	if len(root.MustArray()) < len(messages)*2 {
+		t.Errorf("expected %d elements, got %d", len(messages)*2, len(root.MustArray()))
+		return
+	}
+
+	for i := 0; i < len(messages)*2; i++ {
+		body := jsonString(root, fmt.Sprintf("$[%d].payload.body", i))
+		expected := getEncBody(respSize2)
+		if i%2 == 0 {
+			expected = getEncBody(respSize1)
+		}
+		if body != expected {
+			t.Errorf("payload body[%d] not found: %s", i, root)
+			return
+		}
+	}
+}
+
 func appCallStreamOutputError(t *testing.T, app *app) {
 	m, ok := findMethod(t, app, "grpc.testing.TestService", "StreamingOutputCall")
 	if !ok {
@@ -223,7 +429,7 @@ func appCallStreamOutputError(t *testing.T, app *app) {
 
 	msg := fmt.Sprintf(msgTmpl, errCode)
 
-	err := app.callServerStream(context.Background(), m, []byte(msg))
+	err := app.callStream(context.Background(), m, [][]byte{[]byte(msg)})
 	if err == nil {
 		t.Error("error expected, got nil")
 		return
@@ -444,7 +650,7 @@ func checkStats(t *testing.T, app *app, msg []byte) {
 	ctx, cancel := context.WithTimeout(rpc.WithStatsCtx(context.Background()), callTimeout)
 	defer cancel()
 
-	err := app.callUnary(ctx, m, []byte(msg))
+	err := app.callClientStream(ctx, m, [][]byte{msg})
 	if err != nil {
 		t.Error(err)
 		return

@@ -83,6 +83,7 @@ func (b *msgBuffer) ReadMessages() ([][]byte, error) {
 		// Ctrl+D will trigger io.EOF if the line is empty
 		// it means no new messages are expected
 		if err == io.EOF {
+			fmt.Println()
 			return buf, nil
 		}
 
