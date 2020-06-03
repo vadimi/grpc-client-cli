@@ -37,13 +37,13 @@ func TestAppServiceCalls(t *testing.T) {
 		IsInteractive: false,
 	})
 
-	buf := &bytes.Buffer{}
-	app.w = buf
-
 	if err != nil {
 		t.Error(err)
 		return
 	}
+
+	buf := &bytes.Buffer{}
+	app.w = buf
 
 	t.Run("appCallUnaryServerError", func(t *testing.T) {
 		appCallUnaryServerError(t, app)

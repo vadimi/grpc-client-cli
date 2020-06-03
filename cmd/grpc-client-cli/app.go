@@ -42,13 +42,25 @@ type startOpts struct {
 	Verbose       bool
 	Target        string
 	IsInteractive bool
+
+	// connection credentials
+	TLS      bool
+	Insecure bool
+	CACert   string
+	Cert     string
+	CertKey  string
 }
 
 func newApp(opts *startOpts) (*app, error) {
 	core.SelectFocusIcon = "→"
 
+	var connOpts []rpc.ConnFactoryOption
+	if opts.TLS {
+		connOpts = append(connOpts, rpc.WithConnCred(opts.Insecure, opts.CACert, opts.Cert, opts.CertKey))
+	}
+
 	a := &app{
-		connFact: rpc.NewGrpcConnFactory(),
+		connFact: rpc.NewGrpcConnFactory(connOpts...),
 		opts:     opts,
 	}
 
