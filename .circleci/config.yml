@@ -11,7 +11,7 @@ jobs:
       - run:
           name: cross compile
           command: |
-            gox -os="linux darwin windows" -arch="amd64" -output="./dist/grpc-client-cli_{{.OS}}_{{.Arch}}" ./cmd/grpc-client-cli
+            CGO_ENABLED=0 gox -os="linux darwin windows" -arch="amd64" -output="./dist/grpc-client-cli_{{.OS}}_{{.Arch}}" ./cmd/grpc-client-cli
       - run: go get github.com/jstemmer/go-junit-report
       - run: mkdir -p $TEST_RESULTS
       - run:
