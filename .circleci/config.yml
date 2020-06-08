@@ -3,6 +3,8 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.14
+    environment:
+      TEST_RESULTS: /tmp/test-results
     steps:
       - run: go get -u github.com/mitchellh/gox
       - checkout
@@ -10,7 +12,15 @@ jobs:
           name: cross compile
           command: |
             gox -os="linux darwin windows" -arch="amd64" -output="./dist/grpc-client-cli_{{.OS}}_{{.Arch}}" ./cmd/grpc-client-cli
-      - run: go test -v ./...
+      - run: go get github.com/jstemmer/go-junit-report
+      - run: mkdir -p $TEST_RESULTS
+      - run:
+          name: run tests
+          command: |
+            go test -v ./... | tee ${TEST_RESULTS}/testresults.txt
+            cat ${TEST_RESULTS}/testresults.txt | go-junit-report > ${TEST_RESULTS}/testresults.xml
+      - store_test_results:
+          path: /tmp/test-results
       - persist_to_workspace:
           root: .
           paths:
