@@ -116,6 +116,11 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 		}
 
 		err = stream.SendMsg(msg)
+		// in case of EOF the real error should be discovered by stream.RecvMsg()
+		if err == io.EOF {
+			return nil, errChan
+		}
+
 		if err != nil {
 			errChan <- newCallerError(err)
 			return nil, errChan
