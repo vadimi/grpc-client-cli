@@ -337,7 +337,7 @@ func appCallBidiStreamError(t *testing.T, app *app, buf *bytes.Buffer) {
 
 	s, _ := status.FromError(errors.Cause(err))
 	if s.Code() != codes.Code(errCode) {
-		t.Errorf("expectd status code %v, got %v", codes.Code(errCode), s.Code())
+		t.Errorf("expectd status code %v, got %v, err: %v", codes.Code(errCode), s.Code(), err)
 		return
 	}
 
