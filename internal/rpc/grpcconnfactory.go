@@ -106,16 +106,13 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 			grpc.WithStatsHandler(newStatsHanler()),
 		)
 
-		svcTarget := connOpts.Host
-
 		if !f.settings.tls {
 			opts = append(opts, grpc.WithInsecure())
 
 			// if we have a proxy use it as our service target and pass original target to :authority header
 			// override authority for non TLS connection only
 			if connOpts.Authority != "" {
-				svcTarget = connOpts.Authority
-				opts = append(opts, grpc.WithAuthority(connOpts.Host))
+				opts = append(opts, grpc.WithAuthority(connOpts.Authority))
 			}
 		} else {
 			creds, err := getCredentials(f.settings.insecure, f.settings.caCert, f.settings.cert, f.settings.certKey)
@@ -146,7 +143,7 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 			grpc.WithChainUnaryInterceptor(unaryInterceptors...),
 			grpc.WithChainStreamInterceptor(streamInterceptors...))
 
-		conn.conn, conn.dialErr = dial(svcTarget, opts...)
+		conn.conn, conn.dialErr = dial(connOpts.Host, opts...)
 		if conn.dialErr != nil {
 			log.Println(conn.dialErr)
 		}
