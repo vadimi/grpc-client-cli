@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"gopkg.in/AlecAivazis/survey.v1/terminal"
@@ -20,6 +21,7 @@ type msgBuffer struct {
 	// next message prompt
 	nextPrompt string
 	helpText   string
+	protoText  string
 }
 
 type msgBufferOptions struct {
@@ -34,6 +36,7 @@ func newMsgBuffer(opts *msgBufferOptions) *msgBuffer {
 		opts:       opts,
 		fieldNames: fieldNames(opts.messageDesc),
 		helpText:   getMessageDefaults(opts.messageDesc),
+		protoText:  protoString(opts.messageDesc),
 	}
 }
 
@@ -55,10 +58,16 @@ func (b *msgBuffer) ReadMessage(opts ...ReadLineOpt) ([]byte, error) {
 			}
 		}
 
+		if bytes.Equal(normMsg, []byte("??")) {
+			fmt.Println(b.protoText)
+			continue
+		}
+
 		if err := b.validate(normMsg); err != nil {
 			fmt.Println(err)
 			continue
 		}
+
 		return normMsg, nil
 	}
 }
@@ -151,4 +160,13 @@ func getMessageDefaults(messageDesc *desc.MessageDescriptor) string {
 	})
 
 	return string(msgJSON)
+}
+
+func protoString(messageDesc *desc.MessageDescriptor) string {
+	p := protoprint.Printer{}
+	str, err := p.PrintProtoToString(messageDesc)
+	if err != nil {
+		str = fmt.Sprintf("error printing proto: %v", err)
+	}
+	return str
 }
