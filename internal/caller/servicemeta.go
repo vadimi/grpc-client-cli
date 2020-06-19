@@ -11,11 +11,13 @@ import (
 )
 
 type ServiceMetaData interface {
-	GetServiceMetaDataList(target string, deadline int) ([]*ServiceMeta, error)
+	GetServiceMetaDataList() ([]*ServiceMeta, error)
 }
 
 type serviceMetaData struct {
 	connFact *rpc.GrpcConnFactory
+	target   string
+	deadline int
 }
 
 type ServiceMeta struct {
@@ -26,17 +28,21 @@ type ServiceMeta struct {
 
 // NewServiceMetaData returns new instance of ServiceMetaData
 // that retries service metadata by call grpc Reflection service of the target
-func NewServiceMetaData(connFact *rpc.GrpcConnFactory) ServiceMetaData {
-	return &serviceMetaData{connFact}
+func NewServiceMetaData(connFact *rpc.GrpcConnFactory, target string, deadline int) ServiceMetaData {
+	return &serviceMetaData{
+		connFact: connFact,
+		target:   target,
+		deadline: deadline,
+	}
 }
 
-func (s *serviceMetaData) GetServiceMetaDataList(target string, deadline int) ([]*ServiceMeta, error) {
-	conn, err := s.connFact.GetConn(target)
+func (s *serviceMetaData) GetServiceMetaDataList() ([]*ServiceMeta, error) {
+	conn, err := s.connFact.GetConn(s.target)
 	if err != nil {
 		return nil, err
 	}
 	rpbclient := rpb.NewServerReflectionClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(deadline)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.deadline)*time.Second)
 	defer cancel()
 	rc := grpcreflect.NewClient(ctx, rpbclient)
 

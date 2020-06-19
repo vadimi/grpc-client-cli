@@ -28,7 +28,7 @@ func NewServiceMetadataProto(protoPath, protoImports []string) ServiceMetaData {
 	}
 }
 
-func (smp *serviceMetadataProto) GetServiceMetaDataList(target string, deadline int) ([]*ServiceMeta, error) {
+func (smp *serviceMetadataProto) GetServiceMetaDataList() ([]*ServiceMeta, error) {
 	fileDesc, err := parseProtoFiles(smp.protoPath, smp.protoImports)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing proto files: %w", err)
@@ -61,23 +61,33 @@ func parseProtoFiles(protoDirs []string, protoImports []string) ([]*desc.FileDes
 	if err != nil {
 		return nil, err
 	}
+
 	if len(protofiles) == 0 {
 		return nil, fmt.Errorf("no proto files found in %s", protoDirs)
 	}
 
+	importPaths := []string{}
+	for _, pd := range protoDirs {
+		if path.Ext(pd) != "" {
+			pd = path.Dir(pd)
+		}
+
+		importPaths = append(importPaths, pd)
+	}
+
 	// additional directories to look for dependencies
 	for _, d := range protoImports {
-		protoDirs = append(protoDirs, d)
+		importPaths = append(importPaths, d)
 	}
 
 	p := protoparse.Parser{
-		ImportPaths: protoDirs,
+		ImportPaths: importPaths,
 		Accessor: func(filename string) (io.ReadCloser, error) {
 			return fs.NewFileReader(filename)
 		},
 	}
 
-	resolvedFiles, err := protoparse.ResolveFilenames(protoDirs, protofiles...)
+	resolvedFiles, err := protoparse.ResolveFilenames(importPaths, protofiles...)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +100,7 @@ func findProtoFiles(paths []string) ([]string, error) {
 	for _, p := range paths {
 		ext := path.Ext(p)
 		if ext == ".proto" {
-			protofiles = append(protofiles, p)
+			protofiles = append(protofiles, filepath.Base(p))
 			continue
 		}
 

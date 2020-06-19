@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package testservice;
+
+option go_package = ".;testapi";
+
+service UserService {
+    rpc GetUser (GetUserRequest) returns (GetUserResponse);
+    rpc GetAllUsers (GetAllUsersRequest) returns (stream GetAllUsersResponse);
+    rpc SaveAllUsers (stream SaveAllUsersRequest) returns (SaveAllUsersResponse);
+    rpc RequestUsers (stream RequestUsersRequest) returns (stream RequestUsersResponse);
+}
+
+message GetAllUsersRequest {
+  oneof filter {
+    string name = 1;
+    int32 user_id = 2;
+  }
+}
+
+message GetAllUsersResponse {
+  int32 user_id = 1;
+  string name = 2;
+}
+
+message SaveAllUsersRequest {
+  string name = 1;
+}
+
+message SaveAllUsersResponse {
+  string status = 1;
+}
+
+message RequestUsersRequest {
+  string name = 1;
+}
+
+message GetUserRequest {
+  string name = 1;
+}
+message GetUserResponse {
+  string name = 1;
+}
+
+message RequestUsersResponse {
+  string name = 1;
+}

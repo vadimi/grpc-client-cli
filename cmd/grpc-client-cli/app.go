@@ -75,9 +75,9 @@ func newApp(opts *startOpts) (*app, error) {
 	if len(opts.Protos) > 0 {
 		svc = caller.NewServiceMetadataProto(opts.Protos, opts.ProtoImports)
 	} else {
-		svc = caller.NewServiceMetaData(a.connFact)
+		svc = caller.NewServiceMetaData(a.connFact, a.opts.Target, a.opts.Deadline)
 	}
-	services, err := svc.GetServiceMetaDataList(a.opts.Target, a.opts.Deadline)
+	services, err := svc.GetServiceMetaDataList()
 	if err != nil {
 		return nil, err
 	}
