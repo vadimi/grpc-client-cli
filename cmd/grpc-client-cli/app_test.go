@@ -31,11 +31,15 @@ func TestMain(m *testing.M) {
 }
 
 func TestAppServiceCalls(t *testing.T) {
-	app, err := newApp(&startOpts{
+	runAppServiceCalls(t, &startOpts{
 		Target:        app_testing.TestServerAddr(),
 		Deadline:      15,
 		IsInteractive: false,
 	})
+}
+
+func runAppServiceCalls(t *testing.T, appOpts *startOpts) {
+	app, err := newApp(appOpts)
 
 	if err != nil {
 		t.Error(err)
@@ -50,6 +54,7 @@ func TestAppServiceCalls(t *testing.T) {
 	})
 
 	t.Run("appCallUnary", func(t *testing.T) {
+		buf.Reset()
 		appCallUnary(t, app, buf)
 	})
 
@@ -119,7 +124,7 @@ func appCallUnaryServerError(t *testing.T, app *app) {
 
 	s, _ := status.FromError(errors.Cause(err))
 	if s.Code() != codes.Code(errCode) {
-		t.Errorf("expectd status code %v, got %v", codes.Code(errCode), s.Code())
+		t.Errorf("expectd status code %v, got %v, err: %v", codes.Code(errCode), s.Code(), err)
 	}
 }
 
