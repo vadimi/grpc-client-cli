@@ -83,6 +83,7 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 
 	go func() {
 		for {
+
 			m := dynamic.NewMessage(methodDesc.GetOutputType())
 			err := stream.RecvMsg(m)
 			if err != nil {

@@ -86,6 +86,11 @@ func main() {
 			Required: false,
 			Usage:    "additional directories to search for dependencies, should be used with -proto option",
 		},
+		&cli.StringFlag{
+			Name:  "authority",
+			Value: "",
+			Usage: "override :authority header",
+		},
 	}
 
 	app.Action = baseCmd
@@ -139,6 +144,7 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.Deadline = c.Int("deadline")
 	opts.Verbose = c.Bool("verbose")
 	opts.Target = target
+	opts.Authority = c.String("authority")
 	opts.TLS = c.Bool("tls")
 	opts.Insecure = c.Bool("insecure")
 	opts.CACert = c.String("cacert")

@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -26,6 +27,9 @@ const (
 	// grpc code to exit the method
 	// useful when testing errors behavior
 	MethodExitCode = "exit-code"
+
+	// CheckHeader is used to echo specified headers back
+	CheckHeader = "check-header"
 )
 
 var (
@@ -49,6 +53,19 @@ func (testService) EmptyCall(ctx context.Context, req *grpc_testing.Empty) (*grp
 }
 
 func (testService) UnaryCall(ctx context.Context, req *grpc_testing.SimpleRequest) (*grpc_testing.SimpleResponse, error) {
+	checkHeaders := extractCheckHeaders(ctx)
+	if len(checkHeaders) > 0 {
+		imd, _ := metadata.FromIncomingContext(ctx)
+		for _, hkv := range checkHeaders {
+			values := imd.Get(hkv.name)
+			if len(values) > 0 {
+				if values[0] != hkv.value {
+					return nil, status.Errorf(codes.InvalidArgument, "header '%s' validation failed", hkv.name)
+				}
+			}
+		}
+	}
+
 	if req.ResponseStatus != nil && req.ResponseStatus.Code != int32(codes.OK) {
 		return nil, status.Error(codes.Code(req.ResponseStatus.Code), "error")
 
@@ -296,6 +313,33 @@ func TestServerNoReflectAddr() string {
 
 func TestServerInstance() *grpc.Server {
 	return testGrpcServer
+}
+
+type headerKV struct {
+	name  string
+	value string
+}
+
+func extractCheckHeaders(ctx context.Context) []headerKV {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil
+	}
+
+	headers := md.Get(CheckHeader)
+	res := make([]headerKV, len(headers))
+	for i, h := range headers {
+		hkv := headerKV{}
+		kv := strings.Split(h, "=")
+		if len(kv) > 0 {
+			hkv.name = kv[0]
+		}
+		if len(kv) > 1 {
+			hkv.value = kv[1]
+		}
+		res[i] = hkv
+	}
+	return res
 }
 
 func extractStatusCodes(ctx context.Context) codes.Code {

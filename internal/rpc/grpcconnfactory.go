@@ -32,11 +32,12 @@ type connMeta struct {
 }
 
 type GrpcConnFactorySettings struct {
-	tls      bool
-	insecure bool
-	caCert   string
-	cert     string
-	certKey  string
+	tls       bool
+	insecure  bool
+	caCert    string
+	cert      string
+	certKey   string
+	authority string
 }
 
 type GrpcConnFactory struct {
@@ -57,6 +58,12 @@ func WithConnCred(insecure bool, caCert string, cert string, certKey string) Con
 		s.caCert = caCert
 		s.cert = cert
 		s.certKey = certKey
+	}
+}
+
+func WithAuthority(authority string) ConnFactoryOption {
+	return func(s *GrpcConnFactorySettings) {
+		s.authority = authority
 	}
 }
 
@@ -106,13 +113,18 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 			grpc.WithStatsHandler(newStatsHanler()),
 		)
 
+		authority := connOpts.Authority
+		if f.settings.authority != "" {
+			authority = f.settings.authority
+		}
+
 		if !f.settings.tls {
 			opts = append(opts, grpc.WithInsecure())
 
 			// if we have a proxy use it as our service target and pass original target to :authority header
 			// override authority for non TLS connection only
-			if connOpts.Authority != "" {
-				opts = append(opts, grpc.WithAuthority(connOpts.Authority))
+			if authority != "" {
+				opts = append(opts, grpc.WithAuthority(authority))
 			}
 		} else {
 			creds, err := getCredentials(f.settings.insecure, f.settings.caCert, f.settings.cert, f.settings.certKey)
@@ -120,8 +132,8 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 				conn.dialErr = err
 				return
 			}
-			if connOpts.Authority != "" {
-				creds.OverrideServerName(connOpts.Authority)
+			if authority != "" {
+				creds.OverrideServerName(authority)
 			}
 			opts = append(opts, grpc.WithTransportCredentials(creds))
 		}
