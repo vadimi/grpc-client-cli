@@ -54,5 +54,13 @@ func checkHealth(c *cli.Context, out io.Writer) error {
 		Indent:       " ",
 	}
 
-	return m.Marshal(out, resp)
+	if err := m.Marshal(out, resp); err != nil {
+		return err
+	}
+
+	if resp.Status != grpc_health_v1.HealthCheckResponse_SERVING {
+		return cli.NewExitError("", 1)
+	}
+
+	return nil
 }
