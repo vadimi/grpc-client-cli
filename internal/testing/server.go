@@ -57,10 +57,10 @@ func (testService) UnaryCall(ctx context.Context, req *grpc_testing.SimpleReques
 	if len(checkHeaders) > 0 {
 		imd, _ := metadata.FromIncomingContext(ctx)
 		for _, hkv := range checkHeaders {
-			values := imd.Get(hkv.name)
+			values := imd.Get(hkv.key)
 			if len(values) > 0 {
 				if values[0] != hkv.value {
-					return nil, status.Errorf(codes.InvalidArgument, "header '%s' validation failed", hkv.name)
+					return nil, status.Errorf(codes.InvalidArgument, "header '%s' validation failed", hkv.key)
 				}
 			}
 		}
@@ -316,7 +316,7 @@ func TestServerInstance() *grpc.Server {
 }
 
 type headerKV struct {
-	name  string
+	key   string
 	value string
 }
 
@@ -332,7 +332,7 @@ func extractCheckHeaders(ctx context.Context) []headerKV {
 		hkv := headerKV{}
 		kv := strings.Split(h, "=")
 		if len(kv) > 0 {
-			hkv.name = kv[0]
+			hkv.key = kv[0]
 		}
 		if len(kv) > 1 {
 			hkv.value = kv[1]
