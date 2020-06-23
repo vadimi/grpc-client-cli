@@ -18,7 +18,7 @@ type serviceMetadataProto struct {
 }
 
 // NewServiceMetadataProto returns new instance of ServiceMetaData
-// that retries service metadata from proto files on disk.
+// that reads service metadata from proto files on disk.
 // protoPath - proto files or directories of proto files
 // protoImports - additional directories to search for proto files dependencies
 func NewServiceMetadataProto(protoPath, protoImports []string) ServiceMetaData {
@@ -76,9 +76,7 @@ func parseProtoFiles(protoDirs []string, protoImports []string) ([]*desc.FileDes
 	}
 
 	// additional directories to look for dependencies
-	for _, d := range protoImports {
-		importPaths = append(importPaths, d)
-	}
+	importPaths = append(importPaths, protoImports...)
 
 	p := protoparse.Parser{
 		ImportPaths: importPaths,

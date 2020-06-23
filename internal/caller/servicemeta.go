@@ -27,7 +27,7 @@ type ServiceMeta struct {
 }
 
 // NewServiceMetaData returns new instance of ServiceMetaData
-// that retries service metadata by call grpc Reflection service of the target
+// that reads service metadata by calling grpc Reflection service of the target
 func NewServiceMetaData(connFact *rpc.GrpcConnFactory, target string, deadline int) ServiceMetaData {
 	return &serviceMetaData{
 		connFact: connFact,
