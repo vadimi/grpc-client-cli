@@ -74,6 +74,18 @@ func main() {
 			Value: "",
 			Usage: "client private key, only valid with -cert option",
 		},
+		&cli.StringSliceFlag{
+			Name:     "proto",
+			Required: false,
+			Usage: "proto files or directories to search for proto files, " +
+				"if this option is provided service reflection would be ignored. " +
+				"In order to provide multiple paths, separate them with comma",
+		},
+		&cli.StringSliceFlag{
+			Name:     "protoimports",
+			Required: false,
+			Usage:    "additional directories to search for dependencies, should be used with -proto option",
+		},
 	}
 
 	app.Action = baseCmd
@@ -132,6 +144,8 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.CACert = c.String("cacert")
 	opts.Cert = c.String("cert")
 	opts.CertKey = c.String("certkey")
+	opts.Protos = c.StringSlice("proto")
+	opts.ProtoImports = c.StringSlice("protoimports")
 
 	input := c.String("input")
 

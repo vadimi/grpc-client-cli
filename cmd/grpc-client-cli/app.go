@@ -49,6 +49,9 @@ type startOpts struct {
 	CACert   string
 	Cert     string
 	CertKey  string
+
+	Protos       []string
+	ProtoImports []string
 }
 
 func newApp(opts *startOpts) (*app, error) {
@@ -68,8 +71,13 @@ func newApp(opts *startOpts) (*app, error) {
 		a.w = os.Stdout
 	}
 
-	svc := caller.NewServiceMetaData(a.connFact)
-	services, err := svc.GetServiceMetaDataList(a.opts.Target, a.opts.Deadline)
+	var svc caller.ServiceMetaData
+	if len(opts.Protos) > 0 {
+		svc = caller.NewServiceMetadataProto(opts.Protos, opts.ProtoImports)
+	} else {
+		svc = caller.NewServiceMetaData(a.connFact, a.opts.Target, a.opts.Deadline)
+	}
+	services, err := svc.GetServiceMetaDataList()
 	if err != nil {
 		return nil, err
 	}

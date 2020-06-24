@@ -9,6 +9,7 @@ require (
 	github.com/spyzhov/ajson v0.2.3
 	github.com/urfave/cli/v2 v2.2.0
 	golang.org/x/net v0.0.0-20200513185701-a91f0712d120
+	golang.org/x/text v0.3.0
 	google.golang.org/grpc v1.29.1
 	gopkg.in/AlecAivazis/survey.v1 v1.8.8
 )

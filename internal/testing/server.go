@@ -37,6 +37,9 @@ var (
 
 	testServerMTLSAddr = ""
 	testGrpcMTLSServer *grpc.Server
+
+	testServerNoReflectAddr = ""
+	testGrpcNoReflectServer *grpc.Server
 )
 
 type testService struct{}
@@ -198,6 +201,11 @@ func SetupTestServer() error {
 		return nil
 	}
 
+	testGrpcNoReflectServer, testServerNoReflectAddr, err = setupTestServerNoRelect()
+	if err != nil {
+		return nil
+	}
+
 	// no mTLS
 	creds, err := getCreds(false)
 	if err != nil {
@@ -218,12 +226,25 @@ func SetupTestServer() error {
 }
 
 func setupTestServer(opts ...grpc.ServerOption) (*grpc.Server, string, error) {
+	server := createServer(opts...)
+	reflection.Register(server)
+	return createListener(server)
+}
+
+func setupTestServerNoRelect(opts ...grpc.ServerOption) (*grpc.Server, string, error) {
+	server := createServer(opts...)
+	return createListener(server)
+}
+
+func createServer(opts ...grpc.ServerOption) *grpc.Server {
 	server := grpc.NewServer(opts...)
 	testSvc := &testService{}
 	grpc_testing.RegisterTestServiceServer(server, testSvc)
 	healthpb.RegisterHealthServer(server, &healthService{})
-	reflection.Register(server)
+	return server
+}
 
+func createListener(server *grpc.Server) (*grpc.Server, string, error) {
 	port := 0
 	if l, err := net.Listen("tcp", "127.0.0.1:0"); err != nil {
 		return nil, "", err
@@ -241,6 +262,7 @@ func StopTestServer() {
 	stopTestServer(testGrpcServer)
 	stopTestServer(testGrpcTLSServer)
 	stopTestServer(testGrpcMTLSServer)
+	stopTestServer(testGrpcNoReflectServer)
 }
 
 func stopTestServer(s *grpc.Server) {
@@ -266,6 +288,10 @@ func TestServerTLSAddr() string {
 
 func TestServerMTLSAddr() string {
 	return testServerMTLSAddr
+}
+
+func TestServerNoReflectAddr() string {
+	return testServerNoReflectAddr
 }
 
 func TestServerInstance() *grpc.Server {
