@@ -42,6 +42,7 @@ type startOpts struct {
 	Verbose       bool
 	Target        string
 	IsInteractive bool
+	Authority     string
 
 	// connection credentials
 	TLS      bool
@@ -57,7 +58,7 @@ type startOpts struct {
 func newApp(opts *startOpts) (*app, error) {
 	core.SelectFocusIcon = "→"
 
-	var connOpts []rpc.ConnFactoryOption
+	connOpts := []rpc.ConnFactoryOption{rpc.WithAuthority(opts.Authority)}
 	if opts.TLS {
 		connOpts = append(connOpts, rpc.WithConnCred(opts.Insecure, opts.CACert, opts.Cert, opts.CertKey))
 	}

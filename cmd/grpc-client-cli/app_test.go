@@ -140,8 +140,8 @@ func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
 	msgTmpl := `
 {
   "payload": {
-    "type": "%s",
-    "body": "%s"
+	"type": "%s",
+	"body": "%s"
   }
 }
 `
@@ -185,13 +185,13 @@ func appCallStreamOutput(t *testing.T, app *app, buf *bytes.Buffer) {
 	msgTmpl := `
 {
   "payload": {
-    "type": "%s",
-    "body": "%s"
+	"type": "%s",
+	"body": "%s"
   },
   "response_parameters": [{
-    "size": %d
+	"size": %d
   },{
-    "size": %d
+	"size": %d
   }]
 }
 `
@@ -640,6 +640,80 @@ func TestToJSONArrayCoversion(t *testing.T) {
 
 			if len(res) != c.msgCount {
 				t.Errorf("expected %d messages, got %d", c.msgCount, len(res))
+			}
+		})
+	}
+}
+
+func TestAuthorityHeader(t *testing.T) {
+	authority1 := "testservice1"
+	authority2 := "testservice2"
+	tests := []struct {
+		name              string
+		authority         string
+		target            string
+		expectedAuthority string
+	}{
+		{
+			name:              "defaultAuthority",
+			target:            app_testing.TestServerAddr(),
+			expectedAuthority: app_testing.TestServerAddr(),
+		},
+		{
+			name:              "customAuthorityInTarget",
+			target:            app_testing.TestServerAddr() + ",authority=" + authority1,
+			expectedAuthority: authority1,
+		},
+		{
+			name:              "customAuthorityArg",
+			target:            app_testing.TestServerAddr() + ",authority=" + authority1,
+			authority:         authority2,
+			expectedAuthority: authority2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app, err := newApp(&startOpts{
+				Target:        tt.target,
+				Deadline:      15,
+				Authority:     tt.authority,
+				IsInteractive: false,
+			})
+
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			buf := &bytes.Buffer{}
+			app.w = buf
+
+			m, ok := findMethod(t, app, "grpc.testing.TestService", "UnaryCall")
+			if !ok {
+				return
+			}
+
+			payloadType := "UNCOMPRESSABLE"
+			body := base64.StdEncoding.EncodeToString([]byte("testBody"))
+
+			msgTmpl := `
+{
+  "payload": {
+	"type": "%s",
+	"body": "%s"
+  }
+}
+`
+
+			msg := []byte(fmt.Sprintf(msgTmpl, payloadType, body))
+
+			ctx := metadata.AppendToOutgoingContext(context.Background(), app_testing.CheckHeader, ":authority="+tt.expectedAuthority)
+
+			err = app.callClientStream(ctx, m, [][]byte{msg})
+			if err != nil {
+				t.Errorf("error executing callClientStream(): %v", err)
+				return
 			}
 		})
 	}
