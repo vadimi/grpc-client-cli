@@ -13,11 +13,14 @@ import (
 
 	"github.com/vadimi/grpc-client-cli/internal/resolver/eureka"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/balancer/roundrobin"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // register gzip compressor
 	"google.golang.org/grpc/resolver"
 )
+
+// round_robin loadbalaning policy
+// see https://github.com/grpc/proposal/blob/master/A24-lb-policy-config.md
+const loadBalancer = `{"loadBalancingConfig": [{"round_robin": {}}]}`
 
 func init() {
 	// TODO: remove that line when dns is default resolver
@@ -109,7 +112,7 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 	conn.Do(func() {
 		opts := append(opts,
 			grpc.WithDisableServiceConfig(),
-			grpc.WithBalancerName(roundrobin.Name),
+			grpc.WithDefaultServiceConfig(loadBalancer),
 			grpc.WithStatsHandler(newStatsHanler()),
 		)
 
