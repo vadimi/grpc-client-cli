@@ -18,6 +18,25 @@ import (
 	"github.com/jhump/protoreflect/dynamic"
 )
 
+// Proto message format
+type MsgFormat int
+
+func (f MsgFormat) String() string {
+	switch f {
+	case Text:
+		return "text"
+	case JSON:
+		return "json"
+	default:
+		return "unknown"
+	}
+}
+
+const (
+	JSON MsgFormat = iota
+	Text
+)
+
 type temporary interface {
 	Temporary() bool
 }
@@ -50,11 +69,15 @@ func newCallerError(err error) *callerError {
 }
 
 type ServiceCaller struct {
-	connFact *rpc.GrpcConnFactory
+	connFact  *rpc.GrpcConnFactory
+	msgFormat MsgFormat
 }
 
-func NewServiceCaller(connFact *rpc.GrpcConnFactory) *ServiceCaller {
-	return &ServiceCaller{connFact}
+func NewServiceCaller(connFact *rpc.GrpcConnFactory, msgFormat MsgFormat) *ServiceCaller {
+	return &ServiceCaller{
+		connFact:  connFact,
+		msgFormat: msgFormat,
+	}
 }
 
 func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, reqJSON [][]byte, callOpts ...grpc.CallOption) (chan []byte, chan error) {
@@ -110,7 +133,7 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 	for _, reqMsg := range reqJSON {
 		msg := dynamic.NewMessage(methodDesc.GetInputType())
 
-		err := msg.UnmarshalJSON(reqMsg)
+		err := sc.unmarshalMessage(msg, reqMsg)
 		if err != nil {
 			errChan <- newCallerError(errors.Wrap(err, "invalid input json"))
 			return nil, errChan
@@ -170,9 +193,21 @@ func (sc *ServiceCaller) getConn(target string) (*grpc.ClientConn, error) {
 }
 
 func (sc *ServiceCaller) marshalMessage(msg *dynamic.Message) ([]byte, error) {
+	if sc.msgFormat == Text {
+		return msg.MarshalText()
+	}
+
 	return msg.MarshalJSONPB(&jsonpb.Marshaler{
 		EmitDefaults: true,
 		Indent:       "  ",
 		OrigName:     true,
 	})
+}
+
+func (sc *ServiceCaller) unmarshalMessage(msg *dynamic.Message, b []byte) error {
+	if sc.msgFormat == Text {
+		return msg.UnmarshalText(b)
+	}
+
+	return msg.UnmarshalJSON(b)
 }
