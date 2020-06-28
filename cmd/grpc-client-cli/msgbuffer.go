@@ -25,6 +25,7 @@ type msgBuffer struct {
 type msgBufferOptions struct {
 	reader      *msgReader
 	messageDesc *desc.MessageDescriptor
+	msgFormat   caller.MsgFormat
 }
 
 func newMsgBuffer(opts *msgBufferOptions) *msgBuffer {
@@ -52,13 +53,13 @@ func (b *msgBuffer) ReadMessage(opts ...ReadLineOpt) ([]byte, error) {
 				fmt.Println(b.helpText)
 				continue
 			}
-
-			if err := b.validate(normMsg); err != nil {
-				fmt.Println(err)
-				continue
-			}
-			return normMsg, nil
 		}
+
+		if err := b.validate(normMsg); err != nil {
+			fmt.Println(err)
+			continue
+		}
+		return normMsg, nil
 	}
 }
 
@@ -95,7 +96,24 @@ func (b *msgBuffer) ReadMessages() ([][]byte, error) {
 	}
 }
 
-func (b *msgBuffer) validate(msgJSON []byte) error {
+func (b *msgBuffer) validate(msg []byte) error {
+	if b.opts.msgFormat == caller.Text {
+		return b.validateText(msg)
+	}
+
+	return b.validateJSON(msg)
+}
+
+func (b *msgBuffer) validateText(msgTxt []byte) error {
+	msg := dynamic.NewMessage(b.opts.messageDesc)
+	return msg.UnmarshalText(msgTxt)
+}
+
+func (b *msgBuffer) validateJSON(msgJSON []byte) error {
+	if len(msgJSON) == 0 {
+		return errors.New("syntax error: please provide valid json")
+	}
+
 	msg := dynamic.NewMessage(b.opts.messageDesc)
 	err := msg.UnmarshalJSON(msgJSON)
 	errFmt := "invalid message: %w"

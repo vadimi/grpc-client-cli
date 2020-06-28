@@ -39,15 +39,14 @@ func TestAppServiceCalls(t *testing.T) {
 }
 
 func runAppServiceCalls(t *testing.T, appOpts *startOpts) {
+	buf := &bytes.Buffer{}
+	appOpts.w = buf
 	app, err := newApp(appOpts)
 
 	if err != nil {
 		t.Error(err)
 		return
 	}
-
-	buf := &bytes.Buffer{}
-	app.w = buf
 
 	t.Run("appCallUnaryServerError", func(t *testing.T) {
 		appCallUnaryServerError(t, app)
@@ -572,15 +571,14 @@ func findMethod(t *testing.T, app *app, serviceName, methodName string) (*desc.M
 }
 
 func TestStatsHandler(t *testing.T) {
+	buf := &bytes.Buffer{}
 	app, err := newApp(&startOpts{
 		Target:        app_testing.TestServerAddr(),
 		Deadline:      15,
 		IsInteractive: false,
 		Verbose:       true,
+		w:             buf,
 	})
-
-	buf := &bytes.Buffer{}
-	app.w = buf
 
 	if err != nil {
 		t.Error(err)
@@ -674,20 +672,20 @@ func TestAuthorityHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+
 			app, err := newApp(&startOpts{
 				Target:        tt.target,
 				Deadline:      15,
 				Authority:     tt.authority,
 				IsInteractive: false,
+				w:             buf,
 			})
 
 			if err != nil {
 				t.Error(err)
 				return
 			}
-
-			buf := &bytes.Buffer{}
-			app.w = buf
 
 			m, ok := findMethod(t, app, "grpc.testing.TestService", "UnaryCall")
 			if !ok {
