@@ -335,8 +335,8 @@ func (a *app) printVerboseOutput(ctx context.Context) {
 	s := rpc.ExtractRpcStats(ctx)
 	fmt.Fprintln(a.w)
 	fmt.Fprintln(a.w, "Request duration:", s.Duration)
-	fmt.Fprintf(a.w, "Request size: %d bytes\n", s.ReqSize)
-	fmt.Fprintf(a.w, "Response size: %d bytes\n", s.RespSize)
+	fmt.Fprintf(a.w, "Request size: %d bytes\n", s.ReqSize())
+	fmt.Fprintf(a.w, "Response size: %d bytes\n", s.RespSize())
 }
 
 func toJSONArray(msg []byte) ([][]byte, error) {
