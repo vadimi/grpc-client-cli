@@ -1,23 +1,61 @@
 # Description
 `grpc-client-cli` is a generic `gRPC` command line client. You can call any `gRPC` service that exposes reflection endpoint.
 
-At this point only `json` formatted requests are supported.
+At this time only `json` formatted requests are supported.
+
+![](images/demo.gif)
 
 ## Usage
-Just specify a connection string to a servce in ~host:port~ format and follow instructions to select service, method and enter request message in `json` format.
+Just specify a connection string to a servce in `host:port` format and follow instructions to select service, method and enter request message in `json` format.
 
 `grpc-client-cli localhost:4400`
 
 For full list of supported command line args please run `grpc-client-cli -h`.
 
-The utility also supports authority header override.
+The utility also supports `:authority` header override.
 
 ```
 grpc-client-cli localhost:5050,authority=localhost:9090
 ```
 
+It's also possible to capture some of the diagnostic information like request and response sizes, call duration:
+
+```
+grpc-client-cli -V localhost:4400
+```
+
+### Eureka Support
+
+grpc-client-cli provides integrated support for services published to a Eureka service registry.
+
+Connecting to a service published to Eureka running on http://localhost:8761/eureka/
+
+```
+grpc-client-cli eureka://application-name/
+```
+
+Connecting to a service running remotely on http://example.com:8761/eureka/
+
+```
+grpc-client-cli eureka://example.com/eureka/application-name/
+```
+
+Connecting to a service running remotely on http://example.com:9000/not-eureka/
+
+```
+grpc-client-cli eureka://example.com:9000/not-eureka/application-name/
+```
+
+The Eureka currently connects to services using the IP Addresses published in the service registry and the following published ports, in order:
+
+ * Metadata key "grpc"
+ * Metadata key "grpc.port"
+ * Default insecure port
+
+If you require a different default port, please file an issue, and that port will be considered for inclusion.
+
 ### Subcommands
-**discover** - print servive proto contract
+**discover** - print service proto contract
 
 ```
 grpc-client-cli discover localhost:5050
@@ -55,13 +93,34 @@ Another option of providing a file with message json is `-input` (or `-i`) param
 grpc-client-cli -service UserService -method GetUser -i message.json localhost:5050
 ```
 
+### Autocompletion
+To enable autocompletion add the following commands. In order to make completion persitent add these commands to you `.bashrc` or `.zshrc` files.
+
+**ZSH**
+
+```
+PROG=grpc-client-cli
+_CLI_ZSH_AUTOCOMPLETE_HACK=1
+source  autocomplete/zsh_autocomplete
+```
+
+**Bash**
+
+```
+PROG=grpc-client-cli
+source autocomplete/bash_autocomplete
+```
+
+`autocomplete` directory is located in the root of the repo. Please find more details [here](https://github.com/urfave/cli/blob/master/docs/v2/manual.md#bash-completion).
+
+
 ## JSON format specifics
 Most of the fields in proto message can be intuitively mapped to `json` types. There are some exclusions though:
 
 1. `Timestamp` mapped to a string in `ISO 8601` format.
 
 For example:
-```
+```json
 {
   "flight_start_date": "2018-03-19T00:00:00.0Z"
 }
@@ -70,7 +129,7 @@ For example:
 2. `Duration` mapped to a string in the following format: `00h00m00s`
 
 For example:
-```
+```json
 {
   "start_time": "20h00m00s",
   "some_other_duration": "1s"

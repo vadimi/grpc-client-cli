@@ -4,17 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
-	"github.com/videa-tv/grpc-client-cli/internal/services"
-
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
+	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 func healthCmd(c *cli.Context) error {
+	return checkHealth(c, os.Stdout)
+}
+
+func checkHealth(c *cli.Context, out io.Writer) error {
 	target := ""
 	if c.NArg() > 0 {
 		target = c.Args().First()
@@ -26,15 +30,15 @@ func healthCmd(c *cli.Context) error {
 		return err
 	}
 
-	service := c.GlobalString("service")
-	cf := services.NewGrpcConnFactory()
+	service := c.String("service")
+	cf := rpc.NewGrpcConnFactory()
 	defer cf.Close()
 	conn, err := cf.GetConn(target)
 	if err != nil {
 		return err
 	}
 
-	deadline := c.GlobalInt("deadline")
+	deadline := c.Int("deadline")
 	client := grpc_health_v1.NewHealthClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(deadline)*time.Second)
 	defer cancel()
@@ -50,5 +54,13 @@ func healthCmd(c *cli.Context) error {
 		Indent:       " ",
 	}
 
-	return m.Marshal(os.Stdout, resp)
+	if err := m.Marshal(out, resp); err != nil {
+		return err
+	}
+
+	if resp.Status != grpc_health_v1.HealthCheckResponse_SERVING {
+		return cli.NewExitError("", 1)
+	}
+
+	return nil
 }

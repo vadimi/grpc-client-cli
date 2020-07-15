@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "shared/shared.proto";
+
+package testservice;
+
+service Service {
+        rpc GetData(GetDataRequest) returns (GetDataResponse);
+}
+
+message GetDataRequest{
+        shared.data.InputParameter p = 1;
+}
+
+message GetDataResponse {
+        google.protobuf.Timestamp ts = 1;
+}

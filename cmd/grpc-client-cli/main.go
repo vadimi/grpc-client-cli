@@ -5,54 +5,102 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 const (
-	appVersion = "1.11.0"
+	appVersion = "1.3.0"
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Usage = "generic gRPC client"
 	app.Version = appVersion
+	app.EnableBashCompletion = true
 
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:  "service, s",
+		&cli.StringFlag{
+			Name:    "service",
+			Aliases: []string{"s"},
+			Value:   "",
+			Usage:   "grpc full or partial service name",
+		},
+		&cli.StringFlag{
+			Name:    "method",
+			Aliases: []string{"m"},
+			Value:   "",
+			Usage:   "grpc service method name",
+		},
+		&cli.StringFlag{
+			Name:    "input",
+			Aliases: []string{"i"},
+			Value:   "",
+			Usage:   "file that contains message json, it will be ignored if used in conjunction with stdin pipes",
+		},
+		&cli.IntFlag{
+			Name:    "deadline",
+			Aliases: []string{"d"},
+			Value:   15,
+			Usage:   "grpc call deadline in seconds",
+		},
+		&cli.BoolFlag{
+			Name:    "verbose",
+			Aliases: []string{"V"},
+			Usage:   "output some additional information like request time and message size",
+		},
+		&cli.BoolFlag{
+			Name:  "tls",
+			Value: false,
+			Usage: "use TLS when connecting to grpc server",
+		},
+		&cli.BoolFlag{
+			Name:  "insecure",
+			Value: false,
+			Usage: "skip server's certificate chain and host name verification, this option should only be used for testing",
+		},
+		&cli.StringFlag{
+			Name:  "cacert",
 			Value: "",
-			Usage: "grpc full or partial service name",
+			Usage: "the CA certificate file for verifying the server, this certificate is ignored if -insecure option is true",
 		},
-		cli.StringFlag{
-			Name:  "method, m",
+		&cli.StringFlag{
+			Name:  "cert",
 			Value: "",
-			Usage: "grpc service method name",
+			Usage: "client certificate to present to the server, only valid with -certkey option",
 		},
-		cli.StringFlag{
-			Name:  "input, i",
+		&cli.StringFlag{
+			Name:  "certkey",
 			Value: "",
-			Usage: "file that contains message json, it will be ignored if used in conjunction with stdin pipes",
+			Usage: "client private key, only valid with -cert option",
 		},
-		cli.IntFlag{
-			Name:  "deadline, d",
-			Value: 15,
-			Usage: "grpc call deadline in seconds",
+		&cli.StringSliceFlag{
+			Name:     "proto",
+			Required: false,
+			Usage: "proto files or directories to search for proto files, " +
+				"if this option is provided service reflection would be ignored. " +
+				"In order to provide multiple paths, separate them with comma",
 		},
-		cli.BoolFlag{
-			Name:  "verbose, V",
-			Usage: "output some additional information like request time and message size",
+		&cli.StringSliceFlag{
+			Name:     "protoimports",
+			Required: false,
+			Usage:    "additional directories to search for dependencies, should be used with -proto option",
+		},
+		&cli.StringFlag{
+			Name:  "authority",
+			Value: "",
+			Usage: "override :authority header",
 		},
 	}
 
 	app.Action = baseCmd
-	app.Commands = []cli.Command{
-		cli.Command{
+	app.Commands = []*cli.Command{
+		{
 			Name:   "discover",
 			Usage:  "print service protobuf",
 			Action: discoverCmd,
 		},
-		cli.Command{
+		{
 			Name:   "health",
 			Usage:  "grpc health check",
 			Action: healthCmd,
@@ -91,13 +139,21 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 		return err
 	}
 
-	opts.Service = c.GlobalString("service")
-	opts.Method = c.GlobalString("method")
-	opts.Deadline = c.GlobalInt("deadline")
-	opts.Verbose = c.GlobalBool("verbose")
+	opts.Service = c.String("service")
+	opts.Method = c.String("method")
+	opts.Deadline = c.Int("deadline")
+	opts.Verbose = c.Bool("verbose")
 	opts.Target = target
+	opts.Authority = c.String("authority")
+	opts.TLS = c.Bool("tls")
+	opts.Insecure = c.Bool("insecure")
+	opts.CACert = c.String("cacert")
+	opts.Cert = c.String("cert")
+	opts.CertKey = c.String("certkey")
+	opts.Protos = c.StringSlice("proto")
+	opts.ProtoImports = c.StringSlice("protoimports")
 
-	input := c.GlobalString("input")
+	input := c.String("input")
 
 	message, err := getMessage(input)
 	if err != nil {

@@ -1,4 +1,4 @@
-package services
+package rpc
 
 import (
 	"golang.org/x/net/context"

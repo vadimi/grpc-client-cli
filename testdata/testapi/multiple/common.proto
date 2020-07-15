@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package testservice;
+
+message Result {
+        string name = 1;
+}
