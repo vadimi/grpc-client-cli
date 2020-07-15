@@ -58,14 +58,14 @@ func (b *msgBuffer) ReadMessage(opts ...ReadLineOpt) ([]byte, error) {
 			}
 		}
 
-			if bytes.Equal(normMsg, []byte("??")) {
-				fmt.Println(b.protoText)
-				continue
-			}
+		if bytes.Equal(normMsg, []byte("??")) {
+			fmt.Println(b.protoText)
+			continue
+		}
 
-			if err := b.validate(normMsg); err != nil {
-				fmt.Println(err)
-				continue
+		if err := b.validate(normMsg); err != nil {
+			fmt.Println(err)
+			continue
 		}
 		return normMsg, nil
 	}
