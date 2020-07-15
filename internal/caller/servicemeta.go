@@ -2,23 +2,22 @@ package caller
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
-	"github.com/pkg/errors"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
-var (
-	ErrNotFound = errors.New("grpc element not found")
-)
+type ServiceMetaData interface {
+	GetServiceMetaDataList() ([]*ServiceMeta, error)
+}
 
-type ServiceMetaData struct {
+type serviceMetaData struct {
 	connFact *rpc.GrpcConnFactory
+	target   string
+	deadline int
 }
 
 type ServiceMeta struct {
@@ -27,65 +26,23 @@ type ServiceMeta struct {
 	File    *desc.FileDescriptor
 }
 
-func NewServiceMetaData(connFact *rpc.GrpcConnFactory) *ServiceMetaData {
-	return &ServiceMetaData{connFact}
+// NewServiceMetaData returns new instance of ServiceMetaData
+// that reads service metadata by calling grpc Reflection service of the target
+func NewServiceMetaData(connFact *rpc.GrpcConnFactory, target string, deadline int) ServiceMetaData {
+	return &serviceMetaData{
+		connFact: connFact,
+		target:   target,
+		deadline: deadline,
+	}
 }
 
-func (s *ServiceMetaData) GetFileDescriptor(target, serviceName string) (*desc.FileDescriptor, error) {
-	conn, err := s.connFact.GetConn(target)
+func (s *serviceMetaData) GetServiceMetaDataList() ([]*ServiceMeta, error) {
+	conn, err := s.connFact.GetConn(s.target)
 	if err != nil {
 		return nil, err
 	}
 	rpbclient := rpb.NewServerReflectionClient(conn)
-	rc := grpcreflect.NewClient(context.Background(), rpbclient)
-	defer rc.Reset()
-
-	svc, err := rc.ResolveService(serviceName)
-	if err != nil {
-		if grpcreflect.IsElementNotFoundError(err) {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-
-	return svc.GetFile(), nil
-}
-
-func (s *ServiceMetaData) GetOutputMessageDescriptor(target, service, methodName string) (*desc.MessageDescriptor, error) {
-	fd, err := s.GetFileDescriptor(target, service)
-	if err != nil {
-		return nil, err
-	}
-
-	sd := fd.FindService(service)
-	if sd == nil {
-		return nil, fmt.Errorf("service %s not found", service)
-	}
-
-	md := sd.FindMethodByName(methodName)
-	if md == nil {
-		return nil, fmt.Errorf("method %s not found", methodName)
-	}
-
-	return md.GetOutputType(), nil
-}
-
-func (s *ServiceMetaData) GetOutputMessageDescriptorParse(target, fullMethodName string) (*desc.MessageDescriptor, error) {
-	normMethod := strings.Trim(fullMethodName, "/")
-	i := strings.LastIndex(normMethod, "/")
-	service := normMethod[0:i]
-	methodName := normMethod[i+1:]
-
-	return s.GetOutputMessageDescriptor(target, service, methodName)
-}
-
-func (s *ServiceMetaData) GetServiceMetaDataList(target string, deadline int) ([]*ServiceMeta, error) {
-	conn, err := s.connFact.GetConn(target)
-	if err != nil {
-		return nil, err
-	}
-	rpbclient := rpb.NewServerReflectionClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(deadline)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.deadline)*time.Second)
 	defer cancel()
 	rc := grpcreflect.NewClient(ctx, rpbclient)
 
@@ -130,22 +87,4 @@ func (s *ServiceMetaData) GetServiceMetaDataList(target string, deadline int) ([
 
 	defer rc.Reset()
 	return res, nil
-}
-
-func (s *ServiceMetaData) GetMethodDescriptor(target, service, methodName string) (*desc.MethodDescriptor, error) {
-	fd, err := s.GetFileDescriptor(target, service)
-	if err != nil {
-		return nil, err
-	}
-	sd := fd.FindService(service)
-	if sd == nil {
-		return nil, fmt.Errorf("service %s not found", service)
-	}
-
-	md := sd.FindMethodByName(methodName)
-	if md == nil {
-		return nil, fmt.Errorf("method %s not found", methodName)
-	}
-
-	return md, nil
 }

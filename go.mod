@@ -6,10 +6,11 @@ require (
 	github.com/jhump/protoreflect v1.6.1
 	github.com/peterh/liner v1.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/spyzhov/ajson v0.2.3
+	github.com/spyzhov/ajson v0.3.1
 	github.com/urfave/cli/v2 v2.2.0
 	golang.org/x/net v0.0.0-20200513185701-a91f0712d120
-	google.golang.org/grpc v1.29.1
+	golang.org/x/text v0.3.3
+	google.golang.org/grpc v1.30.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.8
 )
 

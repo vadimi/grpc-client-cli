@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -26,6 +27,9 @@ const (
 	// grpc code to exit the method
 	// useful when testing errors behavior
 	MethodExitCode = "exit-code"
+
+	// CheckHeader is used to echo specified headers back
+	CheckHeader = "check-header"
 )
 
 var (
@@ -37,6 +41,9 @@ var (
 
 	testServerMTLSAddr = ""
 	testGrpcMTLSServer *grpc.Server
+
+	testServerNoReflectAddr = ""
+	testGrpcNoReflectServer *grpc.Server
 )
 
 type testService struct{}
@@ -46,6 +53,19 @@ func (testService) EmptyCall(ctx context.Context, req *grpc_testing.Empty) (*grp
 }
 
 func (testService) UnaryCall(ctx context.Context, req *grpc_testing.SimpleRequest) (*grpc_testing.SimpleResponse, error) {
+	checkHeaders := extractCheckHeaders(ctx)
+	if len(checkHeaders) > 0 {
+		imd, _ := metadata.FromIncomingContext(ctx)
+		for _, hkv := range checkHeaders {
+			values := imd.Get(hkv.key)
+			if len(values) > 0 {
+				if values[0] != hkv.value {
+					return nil, status.Errorf(codes.InvalidArgument, "header '%s' validation failed", hkv.key)
+				}
+			}
+		}
+	}
+
 	if req.ResponseStatus != nil && req.ResponseStatus.Code != int32(codes.OK) {
 		return nil, status.Error(codes.Code(req.ResponseStatus.Code), "error")
 
@@ -198,6 +218,11 @@ func SetupTestServer() error {
 		return nil
 	}
 
+	testGrpcNoReflectServer, testServerNoReflectAddr, err = setupTestServerNoRelect()
+	if err != nil {
+		return nil
+	}
+
 	// no mTLS
 	creds, err := getCreds(false)
 	if err != nil {
@@ -218,12 +243,25 @@ func SetupTestServer() error {
 }
 
 func setupTestServer(opts ...grpc.ServerOption) (*grpc.Server, string, error) {
+	server := createServer(opts...)
+	reflection.Register(server)
+	return createListener(server)
+}
+
+func setupTestServerNoRelect(opts ...grpc.ServerOption) (*grpc.Server, string, error) {
+	server := createServer(opts...)
+	return createListener(server)
+}
+
+func createServer(opts ...grpc.ServerOption) *grpc.Server {
 	server := grpc.NewServer(opts...)
 	testSvc := &testService{}
 	grpc_testing.RegisterTestServiceServer(server, testSvc)
 	healthpb.RegisterHealthServer(server, &healthService{})
-	reflection.Register(server)
+	return server
+}
 
+func createListener(server *grpc.Server) (*grpc.Server, string, error) {
 	port := 0
 	if l, err := net.Listen("tcp", "127.0.0.1:0"); err != nil {
 		return nil, "", err
@@ -241,6 +279,7 @@ func StopTestServer() {
 	stopTestServer(testGrpcServer)
 	stopTestServer(testGrpcTLSServer)
 	stopTestServer(testGrpcMTLSServer)
+	stopTestServer(testGrpcNoReflectServer)
 }
 
 func stopTestServer(s *grpc.Server) {
@@ -268,8 +307,39 @@ func TestServerMTLSAddr() string {
 	return testServerMTLSAddr
 }
 
+func TestServerNoReflectAddr() string {
+	return testServerNoReflectAddr
+}
+
 func TestServerInstance() *grpc.Server {
 	return testGrpcServer
+}
+
+type headerKV struct {
+	key   string
+	value string
+}
+
+func extractCheckHeaders(ctx context.Context) []headerKV {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil
+	}
+
+	headers := md.Get(CheckHeader)
+	res := make([]headerKV, len(headers))
+	for i, h := range headers {
+		hkv := headerKV{}
+		kv := strings.Split(h, "=")
+		if len(kv) > 0 {
+			hkv.key = kv[0]
+		}
+		if len(kv) > 1 {
+			hkv.value = kv[1]
+		}
+		res[i] = hkv
+	}
+	return res
 }
 
 func extractStatusCodes(ctx context.Context) codes.Code {

@@ -13,12 +13,13 @@ import (
 
 func TestHealthCheck(t *testing.T) {
 	cases := []struct {
-		name           string
-		service        string
-		expectedStatus string
+		name      string
+		service   string
+		expStatus string
+		expErr    bool
 	}{
-		{name: "Healthy", service: "", expectedStatus: "SERVING"},
-		{name: "Unhealthy", service: "unhealthy", expectedStatus: "NOT_SERVING"},
+		{name: "Healthy", service: "", expStatus: "SERVING"},
+		{name: "Unhealthy", service: "unhealthy", expStatus: "NOT_SERVING", expErr: true},
 	}
 
 	for _, c := range cases {
@@ -33,7 +34,11 @@ func TestHealthCheck(t *testing.T) {
 
 			err := checkHealth(ctx, buf)
 			if err != nil {
-				t.Errorf("no error expected while checking health, got %v", err)
+				if !c.expErr {
+					t.Errorf("no error expected while checking health, got %v", err)
+				}
+			} else if c.expErr {
+				t.Error("expected error, got nil")
 			}
 
 			res := buf.Bytes()
@@ -43,8 +48,8 @@ func TestHealthCheck(t *testing.T) {
 				return
 			}
 
-			if jsonString(root, "$.status") != c.expectedStatus {
-				t.Errorf("invalid health check status: %s, expected: %s", res, c.expectedStatus)
+			if jsonString(root, "$.status") != c.expStatus {
+				t.Errorf("invalid health check status: %s, expected: %s", res, c.expStatus)
 				return
 			}
 		})
@@ -52,24 +57,35 @@ func TestHealthCheck(t *testing.T) {
 }
 
 func TestHealthCheckError(t *testing.T) {
-	set := flag.NewFlagSet("test", 0)
-	set.Int("deadline", 15, "")
-	set.String("service", "error", "")
-	set.Parse([]string{app_testing.TestServerAddr()})
-	ctx := cli.NewContext(nil, set, nil)
-
-	buf := &bytes.Buffer{}
-
-	err := checkHealth(ctx, buf)
-	if err == nil {
-		t.Error("error expected")
+	cases := []struct {
+		name    string
+		service string
+	}{
+		{name: "Error", service: "error"},
+		{name: "Unhealthy", service: "unhealthy"},
 	}
 
 	expectedExitCode := 1
-	var ec cli.ExitCoder
-	errors.As(err, &ec)
-	if ec.ExitCode() != expectedExitCode {
-		t.Errorf("wrong exit code: %d, expected: %d", ec.ExitCode(), expectedExitCode)
-	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			set := flag.NewFlagSet("test", 0)
+			set.Int("deadline", 15, "")
+			set.String("service", c.service, "")
+			set.Parse([]string{app_testing.TestServerAddr()})
+			ctx := cli.NewContext(nil, set, nil)
 
+			buf := &bytes.Buffer{}
+
+			err := checkHealth(ctx, buf)
+			if err == nil {
+				t.Error("error expected")
+			}
+
+			var ec cli.ExitCoder
+			errors.As(err, &ec)
+			if ec.ExitCode() != expectedExitCode {
+				t.Errorf("wrong exit code: %d, expected: %d", ec.ExitCode(), expectedExitCode)
+			}
+		})
+	}
 }

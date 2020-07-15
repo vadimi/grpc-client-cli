@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+import "common.proto";
+
+package testservice;
+
+service Service1 {
+        rpc GetData1(GetData1Request) returns (GetData1Response);
+}
+
+message GetData1Request{
+}
+
+message GetData1Response {
+        Result res = 1;
+}

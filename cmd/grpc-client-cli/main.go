@@ -6,11 +6,12 @@ import (
 	"os"
 
 	"github.com/urfave/cli/v2"
+	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 const (
-	appVersion = "1.2.1"
+	appVersion = "1.3.0"
 )
 
 func main() {
@@ -74,6 +75,32 @@ func main() {
 			Value: "",
 			Usage: "client private key, only valid with -cert option",
 		},
+		&cli.StringSliceFlag{
+			Name:     "proto",
+			Required: false,
+			Usage: "proto files or directories to search for proto files, " +
+				"if this option is provided service reflection would be ignored. " +
+				"In order to provide multiple paths, separate them with comma",
+		},
+		&cli.StringSliceFlag{
+			Name:     "protoimports",
+			Required: false,
+			Usage:    "additional directories to search for dependencies, should be used with -proto option",
+		},
+		&cli.StringFlag{
+			Name:  "authority",
+			Value: "",
+			Usage: "override :authority header",
+		},
+		&cli.GenericFlag{
+			Name:    "format",
+			Aliases: []string{"f"},
+			Value: &EnumValue{
+				Enum:    []string{"json", "text"},
+				Default: "json",
+			},
+			Usage: "proto message format, supported values are json and text",
+		},
 	}
 
 	app.Action = baseCmd
@@ -127,11 +154,15 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.Deadline = c.Int("deadline")
 	opts.Verbose = c.Bool("verbose")
 	opts.Target = target
+	opts.Authority = c.String("authority")
 	opts.TLS = c.Bool("tls")
 	opts.Insecure = c.Bool("insecure")
 	opts.CACert = c.String("cacert")
 	opts.Cert = c.String("cert")
 	opts.CertKey = c.String("certkey")
+	opts.Protos = c.StringSlice("proto")
+	opts.ProtoImports = c.StringSlice("protoimports")
+	opts.Format = parseMsgFormat(c.Generic("format"))
 
 	input := c.String("input")
 
@@ -218,4 +249,14 @@ func readMessageFile(file string) ([]byte, error) {
 	}
 
 	return f, nil
+}
+
+func parseMsgFormat(val interface{}) caller.MsgFormat {
+	if enum, ok := val.(*EnumValue); ok {
+		if enum.String() == "text" {
+			return caller.Text
+		}
+	}
+
+	return caller.JSON
 }
