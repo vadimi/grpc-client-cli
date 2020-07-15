@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/urfave/cli/v2"
+	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
@@ -91,6 +92,15 @@ func main() {
 			Value: "",
 			Usage: "override :authority header",
 		},
+		&cli.GenericFlag{
+			Name:    "format",
+			Aliases: []string{"f"},
+			Value: &EnumValue{
+				Enum:    []string{"json", "text"},
+				Default: "json",
+			},
+			Usage: "proto message format, supported values are json and text",
+		},
 	}
 
 	app.Action = baseCmd
@@ -152,6 +162,7 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.CertKey = c.String("certkey")
 	opts.Protos = c.StringSlice("proto")
 	opts.ProtoImports = c.StringSlice("protoimports")
+	opts.Format = parseMsgFormat(c.Generic("format"))
 
 	input := c.String("input")
 
@@ -238,4 +249,14 @@ func readMessageFile(file string) ([]byte, error) {
 	}
 
 	return f, nil
+}
+
+func parseMsgFormat(val interface{}) caller.MsgFormat {
+	if enum, ok := val.(*EnumValue); ok {
+		if enum.String() == "text" {
+			return caller.Text
+		}
+	}
+
+	return caller.JSON
 }

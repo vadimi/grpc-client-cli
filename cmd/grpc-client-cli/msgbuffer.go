@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"gopkg.in/AlecAivazis/survey.v1/terminal"
@@ -20,11 +21,13 @@ type msgBuffer struct {
 	// next message prompt
 	nextPrompt string
 	helpText   string
+	protoText  string
 }
 
 type msgBufferOptions struct {
 	reader      *msgReader
 	messageDesc *desc.MessageDescriptor
+	msgFormat   caller.MsgFormat
 }
 
 func newMsgBuffer(opts *msgBufferOptions) *msgBuffer {
@@ -33,6 +36,7 @@ func newMsgBuffer(opts *msgBufferOptions) *msgBuffer {
 		opts:       opts,
 		fieldNames: fieldNames(opts.messageDesc),
 		helpText:   getMessageDefaults(opts.messageDesc),
+		protoText:  protoString(opts.messageDesc),
 	}
 }
 
@@ -52,13 +56,18 @@ func (b *msgBuffer) ReadMessage(opts ...ReadLineOpt) ([]byte, error) {
 				fmt.Println(b.helpText)
 				continue
 			}
-
-			if err := b.validate(normMsg); err != nil {
-				fmt.Println(err)
-				continue
-			}
-			return normMsg, nil
 		}
+
+		if bytes.Equal(normMsg, []byte("??")) {
+			fmt.Println(b.protoText)
+			continue
+		}
+
+		if err := b.validate(normMsg); err != nil {
+			fmt.Println(err)
+			continue
+		}
+		return normMsg, nil
 	}
 }
 
@@ -95,7 +104,24 @@ func (b *msgBuffer) ReadMessages() ([][]byte, error) {
 	}
 }
 
-func (b *msgBuffer) validate(msgJSON []byte) error {
+func (b *msgBuffer) validate(msg []byte) error {
+	if b.opts.msgFormat == caller.Text {
+		return b.validateText(msg)
+	}
+
+	return b.validateJSON(msg)
+}
+
+func (b *msgBuffer) validateText(msgTxt []byte) error {
+	msg := dynamic.NewMessage(b.opts.messageDesc)
+	return msg.UnmarshalText(msgTxt)
+}
+
+func (b *msgBuffer) validateJSON(msgJSON []byte) error {
+	if len(msgJSON) == 0 {
+		return errors.New("syntax error: please provide valid json")
+	}
+
 	msg := dynamic.NewMessage(b.opts.messageDesc)
 	err := msg.UnmarshalJSON(msgJSON)
 	errFmt := "invalid message: %w"
@@ -133,4 +159,13 @@ func getMessageDefaults(messageDesc *desc.MessageDescriptor) string {
 	})
 
 	return string(msgJSON)
+}
+
+func protoString(messageDesc *desc.MessageDescriptor) string {
+	p := protoprint.Printer{}
+	str, err := p.PrintProtoToString(messageDesc)
+	if err != nil {
+		str = fmt.Sprintf("error printing proto: %v", err)
+	}
+	return str
 }
