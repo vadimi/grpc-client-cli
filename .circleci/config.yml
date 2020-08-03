@@ -2,23 +2,20 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.14
+      - image: cimg/go:1.14
     environment:
       TEST_RESULTS: /tmp/test-results
     steps:
-      - run: go get -u github.com/mitchellh/gox
       - checkout
-      - run:
-          name: cross compile
-          command: |
-            CGO_ENABLED=0 gox -os="linux darwin windows" -arch="amd64" -ldflags="-s -w" -output="./dist/grpc-client-cli_{{.OS}}_{{.Arch}}" ./cmd/grpc-client-cli
-      - run: go get github.com/jstemmer/go-junit-report
       - run: mkdir -p $TEST_RESULTS
       - run:
           name: run tests
           command: |
-            go test -v ./... | tee ${TEST_RESULTS}/testresults.txt
-            cat ${TEST_RESULTS}/testresults.txt | go-junit-report > ${TEST_RESULTS}/testresults.xml
+            gotestsum --junitfile ${TEST_RESULTS}/testresults.xml --format short-verbose --no-summary=skipped ./...
+      - run:
+          name: build
+          command: |
+            curl -sL https://git.io/goreleaser | bash -s build
       - store_test_results:
           path: /tmp/test-results
       - persist_to_workspace:

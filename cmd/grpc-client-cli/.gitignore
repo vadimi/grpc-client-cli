@@ -1,2 +1,4 @@
 grpc-client-cli
 grpc-client-cli.exe
+
+.bin/

@@ -1,0 +1,25 @@
+builds:
+  - binary: grpc-client-cli
+    main: ./cmd/grpc-client-cli
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    files:
+    - none* # binaries only
+    format_overrides:
+      - goos: windows
+        format: zip
+    replacements:
+      amd64: x86_64
