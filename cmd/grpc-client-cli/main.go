@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	appVersion = "1.4.0"
+	appVersion = "1.5.0-pre1"
 )
 
 func main() {
@@ -93,13 +93,22 @@ func main() {
 			Usage: "override :authority header",
 		},
 		&cli.GenericFlag{
-			Name:    "format",
-			Aliases: []string{"f"},
+			Name:    "informat",
+			Aliases: []string{"if"},
 			Value: &EnumValue{
 				Enum:    []string{"json", "text"},
 				Default: "json",
 			},
-			Usage: "proto message format, supported values are json and text",
+			Usage: "input proto message format, supported values are json and text",
+		},
+		&cli.GenericFlag{
+			Name:    "outformat",
+			Aliases: []string{"of"},
+			Value: &EnumValue{
+				Enum:    []string{"json", "text"},
+				Default: "json",
+			},
+			Usage: "output proto message format, supported values are json and text",
 		},
 	}
 
@@ -162,7 +171,8 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.CertKey = c.String("certkey")
 	opts.Protos = c.StringSlice("proto")
 	opts.ProtoImports = c.StringSlice("protoimports")
-	opts.Format = parseMsgFormat(c.Generic("format"))
+	opts.InFormat = parseMsgFormat(c.Generic("informat"))
+	opts.OutFormat = parseMsgFormat(c.Generic("outformat"))
 
 	input := c.String("input")
 

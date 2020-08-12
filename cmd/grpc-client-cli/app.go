@@ -43,7 +43,8 @@ type startOpts struct {
 	Target        string
 	IsInteractive bool
 	Authority     string
-	Format        caller.MsgFormat
+	InFormat      caller.MsgFormat
+	OutFormat     caller.MsgFormat
 
 	// connection credentials
 	TLS      bool
@@ -76,7 +77,7 @@ func newApp(opts *startOpts) (*app, error) {
 		a.w = os.Stdout
 	}
 
-	a.printer = newResultPrinter(a.w, opts.Format)
+	a.printer = newResultPrinter(a.w, opts.OutFormat)
 
 	var svc caller.ServiceMetaData
 	if len(opts.Protos) > 0 {
@@ -92,7 +93,7 @@ func newApp(opts *startOpts) (*app, error) {
 	a.servicesList = services
 
 	rl, err := newMsgReader(&msgReaderSettings{
-		Prompt:      fmt.Sprintf("Message %s (type ? to see defaults): ", a.opts.Format.String()),
+		Prompt:      fmt.Sprintf("Message %s (type ? to see defaults): ", a.opts.InFormat.String()),
 		HistoryFile: os.TempDir() + "/grpc-client-cli.tmp",
 	})
 
@@ -155,7 +156,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 		buf := newMsgBuffer(&msgBufferOptions{
 			reader:      a.messageReader,
 			messageDesc: method.GetInputType(),
-			msgFormat:   a.opts.Format,
+			msgFormat:   a.opts.InFormat,
 		})
 
 		var err error
@@ -170,7 +171,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 			}
 		} else {
 			if method.IsClientStreaming() {
-				if a.opts.Format == caller.JSON {
+				if a.opts.InFormat == caller.JSON {
 					messages, err = toJSONArray(message)
 				} else {
 					// TODO: parse text format array
@@ -216,7 +217,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 
 // callClientStream calls unary or client stream method
 func (a *app) callClientStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.Format)
+	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat)
 
 	result, err := serviceCaller.CallClientStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 	if err != nil {
@@ -235,7 +236,7 @@ func (a *app) printResult(r []byte) {
 
 // callStream calls both server or bi-directional stream methods
 func (a *app) callStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.Format)
+	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat)
 	result, errChan := serviceCaller.CallStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 
 	a.printer.BeginArray()

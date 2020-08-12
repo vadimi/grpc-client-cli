@@ -69,14 +69,16 @@ func newCallerError(err error) *callerError {
 }
 
 type ServiceCaller struct {
-	connFact  *rpc.GrpcConnFactory
-	msgFormat MsgFormat
+	connFact     *rpc.GrpcConnFactory
+	inMsgFormat  MsgFormat
+	outMsgFormat MsgFormat
 }
 
-func NewServiceCaller(connFact *rpc.GrpcConnFactory, msgFormat MsgFormat) *ServiceCaller {
+func NewServiceCaller(connFact *rpc.GrpcConnFactory, inMsgFormat, outMsgFormat MsgFormat) *ServiceCaller {
 	return &ServiceCaller{
-		connFact:  connFact,
-		msgFormat: msgFormat,
+		connFact:     connFact,
+		inMsgFormat:  inMsgFormat,
+		outMsgFormat: outMsgFormat,
 	}
 }
 
@@ -193,7 +195,7 @@ func (sc *ServiceCaller) getConn(target string) (*grpc.ClientConn, error) {
 }
 
 func (sc *ServiceCaller) marshalMessage(msg *dynamic.Message) ([]byte, error) {
-	if sc.msgFormat == Text {
+	if sc.outMsgFormat == Text {
 		return msg.MarshalText()
 	}
 
@@ -205,7 +207,7 @@ func (sc *ServiceCaller) marshalMessage(msg *dynamic.Message) ([]byte, error) {
 }
 
 func (sc *ServiceCaller) unmarshalMessage(msg *dynamic.Message, b []byte) error {
-	if sc.msgFormat == Text {
+	if sc.inMsgFormat == Text {
 		return msg.UnmarshalText(b)
 	}
 
