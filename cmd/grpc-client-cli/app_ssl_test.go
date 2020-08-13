@@ -22,12 +22,14 @@ func TestAppServiceTLSInvalidCerts(t *testing.T) {
 }
 
 func TestAppServiceTLSCalls(t *testing.T) {
+	buf := &bytes.Buffer{}
 	app, err := newApp(&startOpts{
 		Target:        app_testing.TestServerTLSAddr(),
 		Deadline:      15,
 		IsInteractive: false,
 		TLS:           true,
 		CACert:        "../../testdata/certs/test_ca.crt",
+		w:             buf,
 	})
 
 	if err != nil {
@@ -35,15 +37,13 @@ func TestAppServiceTLSCalls(t *testing.T) {
 		return
 	}
 
-	buf := &bytes.Buffer{}
-	app.w = buf
-
 	t.Run("appCallUnaryTLS", func(t *testing.T) {
 		appCallUnary(t, app, buf)
 	})
 }
 
 func TestAppServiceMTLSCalls(t *testing.T) {
+	buf := &bytes.Buffer{}
 	app, err := newApp(&startOpts{
 		Target:        app_testing.TestServerMTLSAddr(),
 		Deadline:      15,
@@ -52,15 +52,13 @@ func TestAppServiceMTLSCalls(t *testing.T) {
 		CACert:        "../../testdata/certs/test_ca.crt",
 		Cert:          "../../testdata/certs/test_client.crt",
 		CertKey:       "../../testdata/certs/test_client.key",
+		w:             buf,
 	})
 
 	if err != nil {
 		t.Error(err)
 		return
 	}
-
-	buf := &bytes.Buffer{}
-	app.w = buf
 
 	t.Run("appCallUnaryTLS", func(t *testing.T) {
 		appCallUnary(t, app, buf)

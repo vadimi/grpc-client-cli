@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -32,6 +31,7 @@ type app struct {
 	messageReader *msgReader
 	opts          *startOpts
 	w             io.Writer
+	printer       resultPrinter
 }
 
 type startOpts struct {
@@ -43,6 +43,8 @@ type startOpts struct {
 	Target        string
 	IsInteractive bool
 	Authority     string
+	InFormat      caller.MsgFormat
+	OutFormat     caller.MsgFormat
 
 	// connection credentials
 	TLS      bool
@@ -53,6 +55,8 @@ type startOpts struct {
 
 	Protos       []string
 	ProtoImports []string
+
+	w io.Writer
 }
 
 func newApp(opts *startOpts) (*app, error) {
@@ -68,9 +72,12 @@ func newApp(opts *startOpts) (*app, error) {
 		opts:     opts,
 	}
 
+	a.w = opts.w
 	if a.w == nil {
 		a.w = os.Stdout
 	}
+
+	a.printer = newResultPrinter(a.w, opts.OutFormat)
 
 	var svc caller.ServiceMetaData
 	if len(opts.Protos) > 0 {
@@ -86,7 +93,7 @@ func newApp(opts *startOpts) (*app, error) {
 	a.servicesList = services
 
 	rl, err := newMsgReader(&msgReaderSettings{
-		Prompt:      "Message json (type ? to see defaults): ",
+		Prompt:      fmt.Sprintf("Message %s (type ? to see defaults): ", a.opts.InFormat.String()),
 		HistoryFile: os.TempDir() + "/grpc-client-cli.tmp",
 	})
 
@@ -149,6 +156,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 		buf := newMsgBuffer(&msgBufferOptions{
 			reader:      a.messageReader,
 			messageDesc: method.GetInputType(),
+			msgFormat:   a.opts.InFormat,
 		})
 
 		var err error
@@ -163,7 +171,12 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 			}
 		} else {
 			if method.IsClientStreaming() {
-				messages, err = toJSONArray(message)
+				if a.opts.InFormat == caller.JSON {
+					messages, err = toJSONArray(message)
+				} else {
+					// TODO: parse text format array
+					messages = append(messages, message)
+				}
 			} else {
 				messages = append(messages, message)
 			}
@@ -204,7 +217,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 
 // callClientStream calls unary or client stream method
 func (a *app) callClientStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact)
+	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat)
 
 	result, err := serviceCaller.CallClientStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 	if err != nil {
@@ -217,29 +230,29 @@ func (a *app) callClientStream(ctx context.Context, method *desc.MethodDescripto
 }
 
 func (a *app) printResult(r []byte) {
-	re := regexp.MustCompile(`\[\s*?\]`) // collapse empty array to one line
-	fmt.Fprintf(a.w, "%s\n", re.ReplaceAll(r, []byte("[]")))
+	a.printer.WriteMessage(r)
+	fmt.Fprintln(a.w)
 }
 
 // callStream calls both server or bi-directional stream methods
 func (a *app) callStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact)
+	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat)
 	result, errChan := serviceCaller.CallStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 
-	fmt.Fprint(a.w, "[")
+	a.printer.BeginArray()
 	cnt := 0
 	for {
 		select {
 		case r := <-result:
 			if r != nil {
 				if cnt > 0 {
-					fmt.Fprintln(a.w, ",")
+					a.printer.ArrayDelim()
 				}
-				a.w.Write(r)
+				a.printer.WriteMessage(r)
 				cnt++
 			}
 		case err := <-errChan:
-			fmt.Fprintln(a.w, "]")
+			a.printer.EndArray()
 			return err
 		}
 	}

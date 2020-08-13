@@ -13,6 +13,7 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/pkg/errors"
 	"github.com/spyzhov/ajson"
+	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
 	"google.golang.org/grpc/codes"
@@ -39,15 +40,14 @@ func TestAppServiceCalls(t *testing.T) {
 }
 
 func runAppServiceCalls(t *testing.T, appOpts *startOpts) {
+	buf := &bytes.Buffer{}
+	appOpts.w = buf
 	app, err := newApp(appOpts)
 
 	if err != nil {
 		t.Error(err)
 		return
 	}
-
-	buf := &bytes.Buffer{}
-	app.w = buf
 
 	t.Run("appCallUnaryServerError", func(t *testing.T) {
 		appCallUnaryServerError(t, app)
@@ -135,7 +135,8 @@ func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
 	}
 
 	payloadType := "UNCOMPRESSABLE"
-	body := base64.StdEncoding.EncodeToString([]byte("testBody"))
+	testBody := []byte("testBody")
+	body := base64.StdEncoding.EncodeToString(testBody)
 
 	msgTmpl := `
 {
@@ -145,8 +146,12 @@ func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
   }
 }
 `
-
 	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, body))
+
+	if app.opts.InFormat == caller.Text {
+		msgTmpl = `payload { type: %d body: "%s" }`
+		msg = []byte(fmt.Sprintf(msgTmpl, 1, testBody))
+	}
 
 	err := app.callClientStream(context.Background(), m, [][]byte{msg})
 	if err != nil {
@@ -167,7 +172,7 @@ func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
 	}
 
 	if jsonString(root, "$.payload.body") != body {
-		t.Errorf("payload body not found: %s", res)
+		t.Errorf("payload body not found: %s, %s", res, body)
 	}
 }
 
@@ -202,6 +207,11 @@ func appCallStreamOutput(t *testing.T, app *app, buf *bytes.Buffer) {
 	}
 
 	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, getEncBody(1), respSize1, respSize2))
+
+	if app.opts.InFormat == caller.Text {
+		msgTmpl = `payload { type: %d body: "%s"} response_parameters: {size: %d} response_parameters: {size: %d}`
+		msg = []byte(fmt.Sprintf(msgTmpl, 1, bodyText, respSize1, respSize2))
+	}
 
 	err := app.callStream(context.Background(), m, [][]byte{msg})
 	if err != nil {
@@ -572,15 +582,14 @@ func findMethod(t *testing.T, app *app, serviceName, methodName string) (*desc.M
 }
 
 func TestStatsHandler(t *testing.T) {
+	buf := &bytes.Buffer{}
 	app, err := newApp(&startOpts{
 		Target:        app_testing.TestServerAddr(),
 		Deadline:      15,
 		IsInteractive: false,
 		Verbose:       true,
+		w:             buf,
 	})
-
-	buf := &bytes.Buffer{}
-	app.w = buf
 
 	if err != nil {
 		t.Error(err)
@@ -674,20 +683,20 @@ func TestAuthorityHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+
 			app, err := newApp(&startOpts{
 				Target:        tt.target,
 				Deadline:      15,
 				Authority:     tt.authority,
 				IsInteractive: false,
+				w:             buf,
 			})
 
 			if err != nil {
 				t.Error(err)
 				return
 			}
-
-			buf := &bytes.Buffer{}
-			app.w = buf
 
 			m, ok := findMethod(t, app, "grpc.testing.TestService", "UnaryCall")
 			if !ok {

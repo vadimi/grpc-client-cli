@@ -18,6 +18,25 @@ import (
 	"github.com/jhump/protoreflect/dynamic"
 )
 
+// Proto message format
+type MsgFormat int
+
+func (f MsgFormat) String() string {
+	switch f {
+	case Text:
+		return "text"
+	case JSON:
+		return "json"
+	default:
+		return "unknown"
+	}
+}
+
+const (
+	JSON MsgFormat = iota
+	Text
+)
+
 type temporary interface {
 	Temporary() bool
 }
@@ -50,14 +69,20 @@ func newCallerError(err error) *callerError {
 }
 
 type ServiceCaller struct {
-	connFact *rpc.GrpcConnFactory
+	connFact     *rpc.GrpcConnFactory
+	inMsgFormat  MsgFormat
+	outMsgFormat MsgFormat
 }
 
-func NewServiceCaller(connFact *rpc.GrpcConnFactory) *ServiceCaller {
-	return &ServiceCaller{connFact}
+func NewServiceCaller(connFact *rpc.GrpcConnFactory, inMsgFormat, outMsgFormat MsgFormat) *ServiceCaller {
+	return &ServiceCaller{
+		connFact:     connFact,
+		inMsgFormat:  inMsgFormat,
+		outMsgFormat: outMsgFormat,
+	}
 }
 
-func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, reqJSON [][]byte, callOpts ...grpc.CallOption) (chan []byte, chan error) {
+func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, messages [][]byte, callOpts ...grpc.CallOption) (chan []byte, chan error) {
 	errChan := make(chan error, 1)
 	conn, err := sc.getConn(serviceTarget)
 	if err != nil {
@@ -97,22 +122,22 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 				break
 			}
 
-			json, err := sc.marshalMessage(m)
+			resMsg, err := sc.marshalMessage(m)
 			if err != nil {
 				errChan <- err
 				close(result)
 				break
 			}
-			result <- json
+			result <- resMsg
 		}
 	}()
 
-	for _, reqMsg := range reqJSON {
+	for _, reqMsg := range messages {
 		msg := dynamic.NewMessage(methodDesc.GetInputType())
 
-		err := msg.UnmarshalJSON(reqMsg)
+		err := sc.unmarshalMessage(msg, reqMsg)
 		if err != nil {
-			errChan <- newCallerError(errors.Wrap(err, "invalid input json"))
+			errChan <- newCallerError(errors.Wrapf(err, "invalid input %s", sc.inMsgFormat.String()))
 			return nil, errChan
 		}
 
@@ -137,12 +162,12 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 }
 
 // CallClientStream allows calling unary or client stream methods as they both return only a single result
-func (sc *ServiceCaller) CallClientStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, reqJSON [][]byte, callOpts ...grpc.CallOption) ([]byte, error) {
-	if len(reqJSON) == 0 {
+func (sc *ServiceCaller) CallClientStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, messages [][]byte, callOpts ...grpc.CallOption) ([]byte, error) {
+	if len(messages) == 0 {
 		return nil, newCallerError(errors.New("empty requests are not allowed"))
 	}
 
-	resultCh, errChan := sc.CallStream(ctx, serviceTarget, methodDesc, reqJSON, callOpts...)
+	resultCh, errChan := sc.CallStream(ctx, serviceTarget, methodDesc, messages, callOpts...)
 	var result []byte
 	for {
 		select {
@@ -170,9 +195,21 @@ func (sc *ServiceCaller) getConn(target string) (*grpc.ClientConn, error) {
 }
 
 func (sc *ServiceCaller) marshalMessage(msg *dynamic.Message) ([]byte, error) {
+	if sc.outMsgFormat == Text {
+		return msg.MarshalText()
+	}
+
 	return msg.MarshalJSONPB(&jsonpb.Marshaler{
 		EmitDefaults: true,
 		Indent:       "  ",
 		OrigName:     true,
 	})
+}
+
+func (sc *ServiceCaller) unmarshalMessage(msg *dynamic.Message, b []byte) error {
+	if sc.inMsgFormat == Text {
+		return msg.UnmarshalText(b)
+	}
+
+	return msg.UnmarshalJSON(b)
 }
