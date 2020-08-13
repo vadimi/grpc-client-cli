@@ -82,7 +82,7 @@ func NewServiceCaller(connFact *rpc.GrpcConnFactory, inMsgFormat, outMsgFormat M
 	}
 }
 
-func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, reqJSON [][]byte, callOpts ...grpc.CallOption) (chan []byte, chan error) {
+func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, messages [][]byte, callOpts ...grpc.CallOption) (chan []byte, chan error) {
 	errChan := make(chan error, 1)
 	conn, err := sc.getConn(serviceTarget)
 	if err != nil {
@@ -122,22 +122,22 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 				break
 			}
 
-			json, err := sc.marshalMessage(m)
+			resMsg, err := sc.marshalMessage(m)
 			if err != nil {
 				errChan <- err
 				close(result)
 				break
 			}
-			result <- json
+			result <- resMsg
 		}
 	}()
 
-	for _, reqMsg := range reqJSON {
+	for _, reqMsg := range messages {
 		msg := dynamic.NewMessage(methodDesc.GetInputType())
 
 		err := sc.unmarshalMessage(msg, reqMsg)
 		if err != nil {
-			errChan <- newCallerError(errors.Wrap(err, "invalid input json"))
+			errChan <- newCallerError(errors.Wrapf(err, "invalid input %s", sc.inMsgFormat.String()))
 			return nil, errChan
 		}
 
@@ -162,12 +162,12 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 }
 
 // CallClientStream allows calling unary or client stream methods as they both return only a single result
-func (sc *ServiceCaller) CallClientStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, reqJSON [][]byte, callOpts ...grpc.CallOption) ([]byte, error) {
-	if len(reqJSON) == 0 {
+func (sc *ServiceCaller) CallClientStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, messages [][]byte, callOpts ...grpc.CallOption) ([]byte, error) {
+	if len(messages) == 0 {
 		return nil, newCallerError(errors.New("empty requests are not allowed"))
 	}
 
-	resultCh, errChan := sc.CallStream(ctx, serviceTarget, methodDesc, reqJSON, callOpts...)
+	resultCh, errChan := sc.CallStream(ctx, serviceTarget, methodDesc, messages, callOpts...)
 	var result []byte
 	for {
 		select {

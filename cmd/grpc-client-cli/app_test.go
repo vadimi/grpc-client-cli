@@ -13,6 +13,7 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/pkg/errors"
 	"github.com/spyzhov/ajson"
+	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
 	"google.golang.org/grpc/codes"
@@ -134,7 +135,8 @@ func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
 	}
 
 	payloadType := "UNCOMPRESSABLE"
-	body := base64.StdEncoding.EncodeToString([]byte("testBody"))
+	testBody := []byte("testBody")
+	body := base64.StdEncoding.EncodeToString(testBody)
 
 	msgTmpl := `
 {
@@ -144,8 +146,12 @@ func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
   }
 }
 `
-
 	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, body))
+
+	if app.opts.InFormat == caller.Text {
+		msgTmpl = `payload { type: %d body: "%s" }`
+		msg = []byte(fmt.Sprintf(msgTmpl, 1, testBody))
+	}
 
 	err := app.callClientStream(context.Background(), m, [][]byte{msg})
 	if err != nil {
@@ -166,7 +172,7 @@ func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
 	}
 
 	if jsonString(root, "$.payload.body") != body {
-		t.Errorf("payload body not found: %s", res)
+		t.Errorf("payload body not found: %s, %s", res, body)
 	}
 }
 
@@ -201,6 +207,11 @@ func appCallStreamOutput(t *testing.T, app *app, buf *bytes.Buffer) {
 	}
 
 	msg := []byte(fmt.Sprintf(msgTmpl, payloadType, getEncBody(1), respSize1, respSize2))
+
+	if app.opts.InFormat == caller.Text {
+		msgTmpl = `payload { type: %d body: "%s"} response_parameters: {size: %d} response_parameters: {size: %d}`
+		msg = []byte(fmt.Sprintf(msgTmpl, 1, bodyText, respSize1, respSize2))
+	}
 
 	err := app.callStream(context.Background(), m, [][]byte{msg})
 	if err != nil {
