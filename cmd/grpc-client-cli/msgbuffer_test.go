@@ -94,8 +94,12 @@ func TestHelpCmdMsgBuffer(t *testing.T) {
 	}
 
 	res := buf.Bytes()
-	_, err = ajson.Unmarshal(res)
+	root, err := ajson.Unmarshal(res)
 	if err != nil {
-		t.Errorf("error unmarshaling result json: %v", err)
+		t.Fatalf("error unmarshaling result json: %v", err)
+	}
+
+	if jsonInt32(root, "$.response_size") != int32(0) {
+		t.Errorf("response_size is invalid: %s", res)
 	}
 }
