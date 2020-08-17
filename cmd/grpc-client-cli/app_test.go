@@ -543,7 +543,7 @@ func appCallClientStream(t *testing.T, app *app, buf *bytes.Buffer) {
 	}
 
 	if jsonInt32(root, "$.aggregated_payload_size") != int32(len(bodyMsg)*2) {
-		t.Errorf("payload type not found: %s", res)
+		t.Errorf("aggregated_payload_size is invalid: %s", res)
 		return
 	}
 }

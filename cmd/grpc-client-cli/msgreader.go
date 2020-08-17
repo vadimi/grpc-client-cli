@@ -18,6 +18,10 @@ type msgReaderSettings struct {
 	Prompt      string
 }
 
+type MsgReader interface {
+	ReadLine(names []string, opts ...ReadLineOpt) ([]byte, error)
+}
+
 type msgReader struct {
 	settings *msgReaderSettings
 	line     *liner.State

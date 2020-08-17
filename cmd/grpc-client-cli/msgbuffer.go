@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"gopkg.in/AlecAivazis/survey.v1/terminal"
@@ -20,20 +22,29 @@ type msgBuffer struct {
 	// next message prompt
 	nextPrompt string
 	helpText   string
+	protoText  string
+	w          io.Writer
 }
 
 type msgBufferOptions struct {
-	reader      *msgReader
+	reader      MsgReader
 	messageDesc *desc.MessageDescriptor
 	msgFormat   caller.MsgFormat
+	w           io.Writer
 }
 
 func newMsgBuffer(opts *msgBufferOptions) *msgBuffer {
+	w := opts.w
+	if w == nil {
+		w = os.Stdout
+	}
 	return &msgBuffer{
 		nextPrompt: "Next message (press Ctrl-D to finish): ",
 		opts:       opts,
 		fieldNames: fieldNames(opts.messageDesc),
 		helpText:   getMessageDefaults(opts.messageDesc),
+		protoText:  protoString(opts.messageDesc),
+		w:          w,
 	}
 }
 
@@ -48,17 +59,20 @@ func (b *msgBuffer) ReadMessage(opts ...ReadLineOpt) ([]byte, error) {
 		}
 
 		normMsg := bytes.TrimSpace(message)
-		if len(normMsg) > 0 {
-			if bytes.Equal(normMsg, []byte("?")) {
-				fmt.Println(b.helpText)
-				continue
-			}
+		switch string(bytes.ToLower(normMsg)) {
+		case "?":
+			fmt.Fprintln(b.w, b.helpText)
+			continue
+		case "??", "proto":
+			fmt.Fprintln(b.w, b.protoText)
+			continue
 		}
 
 		if err := b.validate(normMsg); err != nil {
 			fmt.Println(err)
 			continue
 		}
+
 		return normMsg, nil
 	}
 }
@@ -151,4 +165,15 @@ func getMessageDefaults(messageDesc *desc.MessageDescriptor) string {
 	})
 
 	return string(msgJSON)
+}
+
+func protoString(messageDesc *desc.MessageDescriptor) string {
+	p := protoprint.Printer{
+		Compact: true,
+	}
+	str, err := p.PrintProtoToString(messageDesc)
+	if err != nil {
+		str = fmt.Sprintf("error printing proto: %v", err)
+	}
+	return str
 }
