@@ -256,7 +256,7 @@ func setupTestServerNoRelect(opts ...grpc.ServerOption) (*grpc.Server, string, e
 func createServer(opts ...grpc.ServerOption) *grpc.Server {
 	server := grpc.NewServer(opts...)
 	testSvc := &testService{}
-	grpc_testing.RegisterTestServiceServer(server, testSvc)
+	grpc_testing.RegisterTestServiceService(server, grpc_testing.NewTestServiceService(testSvc))
 	healthpb.RegisterHealthServer(server, &healthService{})
 	return server
 }
