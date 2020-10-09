@@ -46,7 +46,9 @@ var (
 	testGrpcNoReflectServer *grpc.Server
 )
 
-type testService struct{}
+type testService struct {
+	grpc_testing.UnimplementedTestServiceServer
+}
 
 func (testService) EmptyCall(ctx context.Context, req *grpc_testing.Empty) (*grpc_testing.Empty, error) {
 	return req, nil
@@ -256,7 +258,7 @@ func setupTestServerNoRelect(opts ...grpc.ServerOption) (*grpc.Server, string, e
 func createServer(opts ...grpc.ServerOption) *grpc.Server {
 	server := grpc.NewServer(opts...)
 	testSvc := &testService{}
-	grpc_testing.RegisterTestServiceService(server, grpc_testing.NewTestServiceService(testSvc))
+	grpc_testing.RegisterTestServiceServer(server, testSvc)
 	healthpb.RegisterHealthServer(server, &healthService{})
 	return server
 }
