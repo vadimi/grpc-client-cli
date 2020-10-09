@@ -52,7 +52,7 @@ func TestRPCStatsRecording(t *testing.T) {
 		t.Errorf("invalid req size: %d, expected: %d", s.ReqSize(), expectedReqSize)
 	}
 
-	expectedRespSize := int64(11)
+	expectedRespSize := int64(6)
 	if s.RespSize() != expectedRespSize {
 		t.Errorf("invalid resp size: %d, expected: %d", s.RespSize(), expectedRespSize)
 	}

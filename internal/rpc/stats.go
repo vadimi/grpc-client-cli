@@ -31,10 +31,7 @@ func (s *Stats) record(rpcStats stats.RPCStats) {
 	case *stats.InHeader:
 		atomic.AddInt64(&s.respSize, int64(v.WireLength))
 	case *stats.InPayload:
-		// TODO(spencer): remove the +5 offset on wire length here, which
-		// is a temporary stand-in for the missing GRPC framing offset.
-		// See: https://github.com/grpc/grpc-go/issues/1647.
-		atomic.AddInt64(&s.respSize, int64(v.WireLength+5))
+		atomic.AddInt64(&s.respSize, int64(v.WireLength))
 	case *stats.InTrailer:
 		atomic.AddInt64(&s.respSize, int64(v.WireLength))
 	case *stats.OutHeader:
