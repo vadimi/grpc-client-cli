@@ -64,6 +64,10 @@ func (e *callerError) Cause() error {
 	return e.err
 }
 
+func (e *callerError) Unwrap() error {
+	return e.Cause()
+}
+
 func newCallerError(err error) *callerError {
 	return &callerError{err}
 }

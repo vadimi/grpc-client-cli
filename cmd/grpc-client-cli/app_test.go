@@ -13,6 +13,8 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/pkg/errors"
 	"github.com/spyzhov/ajson"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
@@ -694,8 +696,7 @@ func TestAuthorityHeader(t *testing.T) {
 			})
 
 			if err != nil {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 
 			m, ok := findMethod(t, app, "grpc.testing.TestService", "UnaryCall")
@@ -745,14 +746,11 @@ func checkStats(t *testing.T, app *app, msg []byte) {
 	}
 
 	s := rpc.ExtractRpcStats(ctx)
-	if s == nil {
-		t.Error("stats are missing in ctx")
-		return
-	}
-
-	if s.ReqSize() > s.RespSize() {
-		t.Errorf("ReqSize should be <= RespSize: %v", s)
-	}
+	require.NotNil(t, s, "stats are missing in ctx")
+	assert.NotEmpty(t, s.ReqHeaders())
+	assert.NotEmpty(t, s.RespHeaders())
+	assert.Equal(t, "/grpc.testing.TestService/UnaryCall", s.FullMethod())
+	assert.True(t, s.ReqSize() <= s.RespSize(), "ReqSize should be <= RespSize: %v", s)
 }
 
 func checkStatsInOutput(t *testing.T, app *app, msg []byte, buf *bytes.Buffer) {
@@ -763,22 +761,17 @@ func checkStatsInOutput(t *testing.T, app *app, msg []byte, buf *bytes.Buffer) {
 
 	err := app.callService(m, msg)
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 
 	res := buf.String()
 
-	if !strings.Contains(res, "Request duration:") {
-		t.Errorf("Request duration is expected in the output: %s", res)
-		return
+	expected := []string{"Request duration:", "Request size:", "Response size:",
+		"Status: 0 OK", "Request Headers:", "Response Headers:",
+		"Full method: /grpc.testing.TestService/UnaryCall",
 	}
 
-	if !strings.Contains(res, "Request size:") {
-		t.Errorf("Request size is expected in the output: %s", res)
-	}
-
-	if !strings.Contains(res, "Response size:") {
-		t.Errorf("Response size is expected in the output: %s", res)
+	for _, e := range expected {
+		assert.Contains(t, res, e)
 	}
 }
