@@ -63,7 +63,7 @@ func main() {
 		&cli.StringFlag{
 			Name:  "cacert",
 			Value: "",
-			Usage: "the CA certificate file for verifying the server, this certificate is ignored if -insecure option is true",
+			Usage: "the CA certificate file for verifying the server, this certificate is ignored if --insecure option is true",
 		},
 		&cli.StringFlag{
 			Name:  "cert",
@@ -85,7 +85,7 @@ func main() {
 		&cli.StringSliceFlag{
 			Name:     "protoimports",
 			Required: false,
-			Usage:    "additional directories to search for dependencies, should be used with -proto option",
+			Usage:    "additional directories to search for dependencies, should be used with --proto option",
 		},
 		&cli.StringFlag{
 			Name:  "authority",

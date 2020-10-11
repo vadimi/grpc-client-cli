@@ -1,27 +1,49 @@
 # Description
-`grpc-client-cli` is a generic `gRPC` command line client. You can call any `gRPC` service that exposes reflection endpoint.
-
-At this time only `json` formatted requests are supported.
+`grpc-client-cli` is a generic `gRPC` command line client - call any `gRPC` service. If your service exposes [gRPC Reflection service](https://github.com/grpc/grpc-proto/blob/master/grpc/reflection/v1/reflection.proto) the tool will discover all services and methods automatically. If not, please specify `--proto` parameter with the path to proto files.
 
 ![](images/demo.gif)
 
+## Installation
+
+Download the binary and install it to `/usr/local` directory:
+
+- `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.5.0/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local -xz`
+
+Or use "go get" approach to install the app to `$GOPATH/bin` directory:
+- `GO111MODULE=on go get -u github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@latest`
+- `GO111MODULE=on go get -u github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.5.0`
+
 ## Usage
-Just specify a connection string to a servce in `host:port` format and follow instructions to select service, method and enter request message in `json` format.
+Just specify a connection string to a servce in `host:port` format and follow instructions to select service, method and enter request message in `json` or `proto` text format.
 
 `grpc-client-cli localhost:4400`
 
+In this case the service needs to expose gRPC Reflection service.
+
 For full list of supported command line args please run `grpc-client-cli -h`.
 
-The utility also supports `:authority` header override.
+To provide the list of services to call specify `--proto` parameter and `--protoimports` in case an additional directory for imports is required:
 
 ```
-grpc-client-cli localhost:5050,authority=localhost:9090
+grpc-client-cli --proto /path/to/proto/files localhost:5050
+```
+
+The tool also supports `:authority` header override.
+
+```
+grpc-client-cli --authority localhost:9090 localhost:5050
 ```
 
 It's also possible to capture some of the diagnostic information like request and response sizes, call duration:
 
 ```
 grpc-client-cli -V localhost:4400
+```
+
+Proto text format for input and output:
+
+```
+grpc-client-cli --informat text --outformat text localhost:5050
 ```
 
 ### Eureka Support
@@ -55,14 +77,14 @@ The Eureka currently connects to services using the IP Addresses published in th
 If you require a different default port, please file an issue, and that port will be considered for inclusion.
 
 ### Subcommands
-**discover** - print service proto contract
+**discover** - print service protobuf contract
 
 ```
 grpc-client-cli discover localhost:5050
 grpc-client-cli -s User discover localhost:5050
 ```
 
-**health** - call health check service
+**health** - call [health check service](https://github.com/grpc/grpc-proto/blob/master/grpc/health/v1/health.proto), this command returns non-zero exit code in case health check returns `NOT_SERVING` response or the call fails for any other reason, so it's useful for example in kubernetes health probes
 
 ```
 grpc-client-cli health localhost:5050
