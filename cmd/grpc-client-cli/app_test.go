@@ -767,8 +767,8 @@ func checkStatsInOutput(t *testing.T, app *app, msg []byte, buf *bytes.Buffer) {
 	res := buf.String()
 
 	expected := []string{"Request duration:", "Request size:", "Response size:",
-		"Status: 0 OK", "Request Headers:", "Response Headers:",
-		"Full method: /grpc.testing.TestService/UnaryCall",
+		"Status:", "Request Headers:", "Response Headers:",
+		"Method:",
 	}
 
 	for _, e := range expected {
