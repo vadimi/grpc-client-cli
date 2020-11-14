@@ -17,8 +17,6 @@ import (
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 	survey "gopkg.in/AlecAivazis/survey.v1"
 	"gopkg.in/AlecAivazis/survey.v1/core"
 )
@@ -205,7 +203,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 		}
 
 		if a.opts.Verbose {
-			a.printVerboseOutput(ctx, errors.Unwrap(err))
+			printVerbose(a.w, rpc.ExtractRpcStats(ctx), errors.Unwrap(err))
 		}
 
 		// if we pass a single message, return
@@ -344,29 +342,6 @@ func (a *app) getService(serviceName string) *caller.ServiceMeta {
 	}
 
 	return nil
-}
-
-func (a *app) printVerboseOutput(ctx context.Context, err error) {
-	printHeaders := func(name string, headers metadata.MD) {
-		if len(headers) > 0 {
-			fmt.Fprintln(a.w, name)
-			for h, v := range headers {
-				fmt.Fprintf(a.w, " %s: %s\n", h, v)
-			}
-			fmt.Fprintln(a.w)
-		}
-	}
-	s := rpc.ExtractRpcStats(ctx)
-	fmt.Fprintln(a.w)
-	fmt.Fprintln(a.w, "Full method:", s.FullMethod())
-	printHeaders("Request Headers:", s.ReqHeaders())
-	printHeaders("Response Headers:", s.RespHeaders())
-	printHeaders("Response Trailers:", s.RespTrailers())
-	statusCode := status.Code(err)
-	fmt.Fprintf(a.w, "Status: %d %s\n", statusCode, statusCode)
-	fmt.Fprintln(a.w, "Request duration:", s.Duration)
-	fmt.Fprintf(a.w, "Request size: %d bytes\n", s.ReqSize())
-	fmt.Fprintf(a.w, "Response size: %d bytes\n", s.RespSize())
 }
 
 func toJSONArray(msg []byte) ([][]byte, error) {

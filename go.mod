@@ -4,8 +4,10 @@ require (
 	github.com/ArthurHlt/go-eureka-client v1.1.0
 	github.com/golang/protobuf v1.4.3
 	github.com/jhump/protoreflect v1.7.0
+	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/peterh/liner v1.2.0
 	github.com/pkg/errors v0.9.1
+	github.com/pterm/pterm v0.12.2
 	github.com/spyzhov/ajson v0.4.2
 	github.com/stretchr/testify v1.6.1
 	github.com/urfave/cli/v2 v2.3.0
