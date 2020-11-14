@@ -55,6 +55,7 @@ type startOpts struct {
 
 	Protos       []string
 	ProtoImports []string
+	Headers      map[string][]string
 
 	w io.Writer
 }
@@ -65,6 +66,10 @@ func newApp(opts *startOpts) (*app, error) {
 	connOpts := []rpc.ConnFactoryOption{rpc.WithAuthority(opts.Authority)}
 	if opts.TLS {
 		connOpts = append(connOpts, rpc.WithConnCred(opts.Insecure, opts.CACert, opts.Cert, opts.CertKey))
+	}
+
+	if len(opts.Headers) > 0 {
+		connOpts = append(connOpts, rpc.WithHeaders(opts.Headers))
 	}
 
 	a := &app{

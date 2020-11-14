@@ -32,6 +32,14 @@ func (f MsgFormat) String() string {
 	}
 }
 
+func ParseMsgFormat(s string) MsgFormat {
+	if s == "text" {
+		return Text
+	}
+
+	return JSON
+}
+
 const (
 	JSON MsgFormat = iota
 	Text

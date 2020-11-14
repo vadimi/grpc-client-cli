@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
+	"github.com/vadimi/grpc-client-cli/internal/cliext"
 	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
@@ -87,6 +88,14 @@ func main() {
 			Required: false,
 			Usage:    "additional directories to search for dependencies, should be used with --proto option",
 		},
+		&cli.GenericFlag{
+			Name:        "header",
+			Aliases:     []string{"H"},
+			Required:    false,
+			Value:       cliext.NewMapValue(),
+			Usage:       "extra header(s) to include in the request",
+			DefaultText: "no extra headers",
+		},
 		&cli.StringFlag{
 			Name:  "authority",
 			Value: "",
@@ -95,7 +104,7 @@ func main() {
 		&cli.GenericFlag{
 			Name:    "informat",
 			Aliases: []string{"if"},
-			Value: &EnumValue{
+			Value: &cliext.EnumValue{
 				Enum:    []string{"json", "text"},
 				Default: "json",
 			},
@@ -104,7 +113,7 @@ func main() {
 		&cli.GenericFlag{
 			Name:    "outformat",
 			Aliases: []string{"of"},
-			Value: &EnumValue{
+			Value: &cliext.EnumValue{
 				Enum:    []string{"json", "text"},
 				Default: "json",
 			},
@@ -173,6 +182,7 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.ProtoImports = c.StringSlice("protoimports")
 	opts.InFormat = parseMsgFormat(c.Generic("informat"))
 	opts.OutFormat = parseMsgFormat(c.Generic("outformat"))
+	opts.Headers = cliext.ParseMapValue(c.Generic("header"))
 
 	input := c.String("input")
 
@@ -262,10 +272,8 @@ func readMessageFile(file string) ([]byte, error) {
 }
 
 func parseMsgFormat(val interface{}) caller.MsgFormat {
-	if enum, ok := val.(*EnumValue); ok {
-		if enum.String() == "text" {
-			return caller.Text
-		}
+	if enum, ok := val.(*cliext.EnumValue); ok {
+		return caller.ParseMsgFormat(enum.String())
 	}
 
 	return caller.JSON

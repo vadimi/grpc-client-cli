@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // register gzip compressor
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/resolver"
 )
 
@@ -41,6 +42,7 @@ type GrpcConnFactorySettings struct {
 	cert      string
 	certKey   string
 	authority string
+	headers   map[string][]string
 }
 
 type GrpcConnFactory struct {
@@ -67,6 +69,12 @@ func WithConnCred(insecure bool, caCert string, cert string, certKey string) Con
 func WithAuthority(authority string) ConnFactoryOption {
 	return func(s *GrpcConnFactorySettings) {
 		s.authority = authority
+	}
+}
+
+func WithHeaders(h map[string][]string) ConnFactoryOption {
+	return func(s *GrpcConnFactorySettings) {
+		s.headers = h
 	}
 }
 
@@ -144,13 +152,15 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 		unaryInterceptors := []grpc.UnaryClientInterceptor{}
 		streamInterceptors := []grpc.StreamClientInterceptor{}
 
-		if len(connOpts.Metadata) > 0 {
+		md := f.metadata(connOpts.Metadata)
+
+		if len(md) > 0 {
 			unaryInterceptors = append(unaryInterceptors,
-				MetadataUnaryInterceptor(connOpts.Metadata),
+				MetadataUnaryInterceptor(md),
 			)
 
 			streamInterceptors = append(streamInterceptors,
-				MetadataStreamInterceptor(connOpts.Metadata),
+				MetadataStreamInterceptor(md),
 			)
 		}
 
@@ -201,6 +211,19 @@ func (f *GrpcConnFactory) CloseConn(target string) error {
 		delete(f.conns.cache, connOpts.Host)
 	}
 	return err
+}
+
+func (f *GrpcConnFactory) metadata(connOptsMd map[string][]string) map[string][]string {
+	var mds []metadata.MD
+	if f.settings.headers != nil {
+		mds = append(mds, f.settings.headers)
+	}
+
+	if len(connOptsMd) > 0 {
+		mds = append(mds, connOptsMd)
+	}
+
+	return metadata.Join(mds...)
 }
 
 func getCredentials(insecure bool, caCert, cert, certKey string) (credentials.TransportCredentials, error) {
