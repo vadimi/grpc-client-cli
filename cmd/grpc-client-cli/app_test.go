@@ -591,6 +591,10 @@ func TestStatsHandler(t *testing.T) {
 		IsInteractive: false,
 		Verbose:       true,
 		w:             buf,
+		Headers: map[string][]string{
+			"test":       []string{"v1"},
+			"test_multi": []string{"a1", "a2"},
+		},
 	})
 
 	if err != nil {
@@ -748,6 +752,8 @@ func checkStats(t *testing.T, app *app, msg []byte) {
 	s := rpc.ExtractRpcStats(ctx)
 	require.NotNil(t, s, "stats are missing in ctx")
 	assert.NotEmpty(t, s.ReqHeaders())
+	assert.Equal(t, []string{"v1"}, s.ReqHeaders()["test"])
+	assert.Equal(t, []string{"a1", "a2"}, s.ReqHeaders()["test_multi"])
 	assert.NotEmpty(t, s.RespHeaders())
 	assert.Equal(t, "/grpc.testing.TestService/UnaryCall", s.FullMethod())
 	assert.True(t, s.ReqSize() <= s.RespSize(), "ReqSize should be <= RespSize: %v", s)
