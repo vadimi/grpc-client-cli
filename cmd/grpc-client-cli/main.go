@@ -143,7 +143,7 @@ func discoverCmd(c *cli.Context) (e error) {
 	}
 	err := runApp(c, opts)
 	if err != nil {
-		return cli.NewExitError(err, 1)
+		return cli.Exit(err, 1)
 	}
 	return nil
 }
@@ -151,7 +151,7 @@ func discoverCmd(c *cli.Context) (e error) {
 func baseCmd(c *cli.Context) (e error) {
 	err := runApp(c, &startOpts{})
 	if err != nil {
-		return cli.NewExitError(err, 1)
+		return cli.Exit(err, 1)
 	}
 	return nil
 }

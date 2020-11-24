@@ -8,10 +8,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/urfave/cli/v2"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func healthCmd(c *cli.Context) error {
@@ -46,20 +46,23 @@ func checkHealth(c *cli.Context, out io.Writer) error {
 		Service: service,
 	})
 	if err != nil {
-		return cli.NewExitError(err, 1)
+		return cli.Exit(err, 1)
 	}
 
-	m := jsonpb.Marshaler{
-		EmitDefaults: true,
-		Indent:       " ",
+	m := protojson.MarshalOptions{
+		EmitUnpopulated: true,
+		Indent:          " ",
 	}
 
-	if err := m.Marshal(out, resp); err != nil {
+	b, err := m.Marshal(resp)
+	if err != nil {
 		return err
 	}
 
+	fmt.Fprintln(out, string(b))
+
 	if resp.Status != grpc_health_v1.HealthCheckResponse_SERVING {
-		return cli.NewExitError("", 1)
+		return cli.Exit("", 1)
 	}
 
 	return nil
