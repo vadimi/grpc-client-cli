@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pterm/pterm"
+	"github.com/gookit/color"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc/status"
 )
@@ -12,33 +12,33 @@ import (
 func printVerbose(w io.Writer, s *rpc.Stats, rpcErr error) {
 	fmt.Fprintln(w)
 
-	pterm.Fprintln(w, pterm.Bold.Sprint("Method: ")+s.FullMethod())
+	fmt.Fprintln(w, color.Bold.Sprint("Method: ")+s.FullMethod())
 
 	rpcStatus := status.Code(rpcErr)
-	pterm.Fprintln(w, pterm.Bold.Sprint("Status: ")+pterm.FgLightYellow.Sprintf("%d", rpcStatus)+" "+pterm.Italic.Sprint(rpcStatus))
+	fmt.Fprintln(w, color.Bold.Sprint("Status: ")+color.FgLightYellow.Sprintf("%d", rpcStatus)+" "+color.OpItalic.Sprint(rpcStatus))
 
-	pterm.Fprintln(w, pterm.Italic.Sprint("\nRequest Headers:"))
+	fmt.Fprintln(w, color.OpItalic.Sprint("\nRequest Headers:"))
 	for k, v := range s.ReqHeaders() {
-		pterm.Fprintln(w, pterm.Bold.Sprint(k+": ")+pterm.LightGreen(v))
+		fmt.Fprintln(w, color.Bold.Sprint(k+": ")+color.LightGreen.Sprint(v))
 	}
 
 	if s.RespHeaders().Len() > 0 {
-		pterm.Fprintln(w, pterm.Italic.Sprint("\nResponse Headers:"))
+		fmt.Fprintln(w, color.OpItalic.Sprint("\nResponse Headers:"))
 		for k, v := range s.RespHeaders() {
-			pterm.Fprintln(w, pterm.Bold.Sprint(k+": ")+pterm.LightGreen(v))
+			fmt.Fprintln(w, color.Bold.Sprint(k+": ")+color.LightGreen.Sprint(v))
 		}
 	}
 
 	if s.RespTrailers().Len() > 0 {
-		pterm.Fprintln(w, pterm.Italic.Sprint("\nResponse Trailers:"))
+		color.Fprintln(w, color.OpItalic.Sprint("\nResponse Trailers:"))
 		for k, v := range s.RespTrailers() {
-			pterm.Fprintln(w, pterm.Bold.Sprint(k+": ")+pterm.LightGreen(v))
+			fmt.Fprintln(w, color.Bold.Sprint(k+": ")+color.LightGreen.Sprint(v))
 		}
 	}
 
 	fmt.Fprintln(w)
-	pterm.Fprintln(w, pterm.Bold.Sprint("Request duration: ")+pterm.FgLightYellow.Sprint(s.Duration))
-	pterm.Fprintln(w, pterm.Bold.Sprint("Request size: ")+pterm.FgLightYellow.Sprintf("%d bytes", s.ReqSize()))
-	pterm.Fprintln(w, pterm.Bold.Sprint("Response size: ")+pterm.FgLightYellow.Sprintf("%d bytes", s.RespSize()))
+	fmt.Fprintln(w, color.Bold.Sprint("Request duration: ")+color.FgLightYellow.Sprint(s.Duration))
+	fmt.Fprintln(w, color.Bold.Sprint("Request size: ")+color.FgLightYellow.Sprintf("%d bytes", s.ReqSize()))
+	fmt.Fprintln(w, color.Bold.Sprint("Response size: ")+color.FgLightYellow.Sprintf("%d bytes", s.RespSize()))
 	fmt.Fprintln(w)
 }
