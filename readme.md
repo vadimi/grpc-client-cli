@@ -7,12 +7,12 @@
 
 Download the binary and install it to `/usr/local` directory:
 
-- `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.6.0/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local -xz`
+- `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.6.1/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local -xz`
 
 Or use "go get" approach to install the app to `$GOPATH/bin` directory:
 
 - `GO111MODULE=on go get -u github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@latest`
-- `GO111MODULE=on go get -u github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.6.0`
+- `GO111MODULE=on go get -u github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.6.1`
 
 ## Usage
 Just specify a connection string to a servce in `host:port` format and follow instructions to select service, method and enter request message in `json` or `proto` text format.
