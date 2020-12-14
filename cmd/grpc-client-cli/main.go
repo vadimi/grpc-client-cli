@@ -126,7 +126,7 @@ func main() {
 		},
 		&cli.DurationFlag{
 			Name:  "keepalive-time",
-			Usage: `If set, send keepalive pings every "keepalive-time" timeout`,
+			Usage: `If set, send keepalive pings every "keepalive-time" timeout. If not set, default grpc settings are used`,
 		},
 	}
 
