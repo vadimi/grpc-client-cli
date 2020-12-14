@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
@@ -15,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // register gzip compressor
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/resolver"
 )
@@ -36,13 +38,15 @@ type connMeta struct {
 }
 
 type GrpcConnFactorySettings struct {
-	tls       bool
-	insecure  bool
-	caCert    string
-	cert      string
-	certKey   string
-	authority string
-	headers   map[string][]string
+	tls           bool
+	insecure      bool
+	caCert        string
+	cert          string
+	certKey       string
+	authority     string
+	headers       map[string][]string
+	keepalive     bool
+	keepaliveTime time.Duration
 }
 
 type GrpcConnFactory struct {
@@ -75,6 +79,13 @@ func WithAuthority(authority string) ConnFactoryOption {
 func WithHeaders(h map[string][]string) ConnFactoryOption {
 	return func(s *GrpcConnFactorySettings) {
 		s.headers = h
+	}
+}
+
+func WithKeepalive(keepalive bool, keepaliveTime time.Duration) ConnFactoryOption {
+	return func(s *GrpcConnFactorySettings) {
+		s.keepalive = keepalive
+		s.keepaliveTime = keepaliveTime
 	}
 }
 
@@ -147,6 +158,18 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 				creds.OverrideServerName(authority)
 			}
 			opts = append(opts, grpc.WithTransportCredentials(creds))
+		}
+
+		if f.settings.keepalive {
+			ka := keepalive.ClientParameters{
+				PermitWithoutStream: true,
+			}
+
+			if f.settings.keepaliveTime > 0 {
+				ka.Time = f.settings.keepaliveTime
+			}
+
+			opts = append(opts, grpc.WithKeepaliveParams(ka))
 		}
 
 		unaryInterceptors := []grpc.UnaryClientInterceptor{}

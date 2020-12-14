@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	appVersion = "1.6.1"
+	appVersion = "1.7.0-pre1"
 )
 
 func main() {
@@ -119,6 +119,15 @@ func main() {
 			},
 			Usage: "output proto message format, supported values are json and text",
 		},
+		&cli.BoolFlag{
+			Name:  "keepalive",
+			Value: false,
+			Usage: "If true, send keepalive pings even with no active RPCs. If false, default grpc settings are used",
+		},
+		&cli.DurationFlag{
+			Name:  "keepalive-time",
+			Usage: `If set, send keepalive pings every "keepalive-time" timeout`,
+		},
 	}
 
 	app.Action = baseCmd
@@ -183,6 +192,8 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.InFormat = parseMsgFormat(c.Generic("informat"))
 	opts.OutFormat = parseMsgFormat(c.Generic("outformat"))
 	opts.Headers = cliext.ParseMapValue(c.Generic("header"))
+	opts.KeepaliveTime = c.Duration("keepalive-time")
+	opts.Keepalive = c.Bool("keepalive")
 
 	input := c.String("input")
 
