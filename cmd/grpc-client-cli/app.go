@@ -57,13 +57,19 @@ type startOpts struct {
 	ProtoImports []string
 	Headers      map[string][]string
 
+	Keepalive     bool
+	KeepaliveTime time.Duration
+
 	w io.Writer
 }
 
 func newApp(opts *startOpts) (*app, error) {
 	core.SelectFocusIcon = "→"
 
-	connOpts := []rpc.ConnFactoryOption{rpc.WithAuthority(opts.Authority)}
+	connOpts := []rpc.ConnFactoryOption{
+		rpc.WithAuthority(opts.Authority),
+		rpc.WithKeepalive(opts.Keepalive, opts.KeepaliveTime),
+	}
 	if opts.TLS {
 		connOpts = append(connOpts, rpc.WithConnCred(opts.Insecure, opts.CACert, opts.Cert, opts.CertKey))
 	}
