@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vadimi/grpc-client-cli/internal/testing/grpc_testing"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
