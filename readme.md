@@ -117,7 +117,7 @@ grpc-client-cli -service UserService -method GetUser -i message.json localhost:5
 ```
 
 ### Autocompletion
-To enable autocompletion add the following commands. In order to make completion persitent add these commands to you `.bashrc` or `.zshrc` files.
+To enable autocompletion in your terminal add the following commands to your `.bashrc` or `.zshrc` files.
 
 **ZSH**
 
