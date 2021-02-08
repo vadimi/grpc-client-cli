@@ -44,7 +44,7 @@ func main() {
 			Name:    "deadline",
 			Aliases: []string{"d"},
 			Value:   "15s",
-			Usage:   "grpc call deadline duration, supports go duration format, e.g. 15s, 3m, 1h, etc. If no format is specified, defaults to seconds",
+			Usage:   "grpc call deadline in go duration format, e.g. 15s, 3m, 1h, etc. If no format is specified, defaults to seconds",
 		},
 		&cli.BoolFlag{
 			Name:    "verbose",
