@@ -40,11 +40,11 @@ func main() {
 			Value:   "",
 			Usage:   "file that contains message json, it will be ignored if used in conjunction with stdin pipes",
 		},
-		&cli.IntFlag{
+		&cli.StringFlag{
 			Name:    "deadline",
 			Aliases: []string{"d"},
-			Value:   15,
-			Usage:   "grpc call deadline in seconds",
+			Value:   "15s",
+			Usage:   "grpc call deadline in go duration format, e.g. 15s, 3m, 1h, etc. If no format is specified, defaults to seconds",
 		},
 		&cli.BoolFlag{
 			Name:    "verbose",
@@ -177,9 +177,14 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 		return err
 	}
 
+	deadline, err := cliext.ParseDuration(c.String("deadline"))
+	if err != nil {
+		return err
+	}
+
 	opts.Service = c.String("service")
 	opts.Method = c.String("method")
-	opts.Deadline = c.Int("deadline")
+	opts.Deadline = int(deadline.Seconds())
 	opts.Verbose = c.Bool("verbose")
 	opts.Target = target
 	opts.Authority = c.String("authority")
