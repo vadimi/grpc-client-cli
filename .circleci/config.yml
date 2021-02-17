@@ -7,10 +7,10 @@ jobs:
       TEST_RESULTS: /tmp/test-results
     steps:
       - checkout
-      - run: mkdir -p $TEST_RESULTS
       - run:
           name: run tests
           command: |
+            mkdir -p $TEST_RESULTS
             gotestsum --junitfile ${TEST_RESULTS}/testresults.xml --format short-verbose --no-summary=skipped ./...
       - run:
           name: build
