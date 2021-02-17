@@ -1,4 +1,5 @@
 # Description
+
 `grpc-client-cli` is a generic `gRPC` command line client - call any `gRPC` service. If your service exposes [gRPC Reflection service](https://github.com/grpc/grpc-proto/blob/master/grpc/reflection/v1/reflection.proto) the tool will discover all services and methods automatically. If not, please specify `--proto` parameter with the path to proto files.
 
 ![](images/demo.gif)
@@ -7,14 +8,15 @@
 
 Download the binary and install it to `/usr/local` directory:
 
-- `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.7.0/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local -xz`
+- `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.8.0/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local -xz`
 
 Or use "go get" approach to install the app to `$GOPATH/bin` directory:
 
 - `GO111MODULE=on go get -u github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@latest`
-- `GO111MODULE=on go get -u github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.7.0`
+- `GO111MODULE=on go get -u github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.8.0`
 
 ## Usage
+
 Just specify a connection string to a servce in `host:port` format and follow instructions to select service, method and enter request message in `json` or `proto` text format.
 
 `grpc-client-cli localhost:4400`
@@ -71,13 +73,14 @@ grpc-client-cli eureka://example.com:9000/not-eureka/application-name/
 
 The Eureka currently connects to services using the IP Addresses published in the service registry and the following published ports, in order:
 
- * Metadata key "grpc"
- * Metadata key "grpc.port"
- * Default insecure port
+- Metadata key "grpc"
+- Metadata key "grpc.port"
+- Default insecure port
 
 If you require a different default port, please file an issue, and that port will be considered for inclusion.
 
 ### Subcommands
+
 **discover** - print service protobuf contract
 
 ```
@@ -92,9 +95,11 @@ grpc-client-cli health localhost:5050
 ```
 
 ### Non-interactive mode
+
 In non-interactive mode `grpc-client-cli` expects all parameters to be passed to execute gRPC service.
 
 **Pass message json through stdin**
+
 ```
 echo '{"user_id": "12345"}' | grpc-client-cli -service UserService -method GetUser localhost:5050
 ```
@@ -104,6 +109,7 @@ cat message.json | grpc-client-cli -service UserService -method GetUser localhos
 ```
 
 On windows this could be achieved using `type` command
+
 ```
 type message.json | grpc-client-cli -service UserService -method GetUser localhost:5050
 ```
@@ -117,6 +123,7 @@ grpc-client-cli -service UserService -method GetUser -i message.json localhost:5
 ```
 
 ### Autocompletion
+
 To enable autocompletion in your terminal add the following commands to your `.bashrc` or `.zshrc` files.
 
 **ZSH**
@@ -136,13 +143,14 @@ source autocomplete/bash_autocomplete
 
 `autocomplete` directory is located in the root of the repo. Please find more details [here](https://github.com/urfave/cli/blob/master/docs/v2/manual.md#bash-completion).
 
-
 ## JSON format specifics
+
 Most of the fields in proto message can be intuitively mapped to `json` types. There are some exclusions though:
 
 1. `Timestamp` mapped to a string in `ISO 8601` format.
 
 For example:
+
 ```json
 {
   "flight_start_date": "2018-03-19T00:00:00.0Z"
@@ -152,6 +160,7 @@ For example:
 2. `Duration` mapped to a string in the following format: `00h00m00s`
 
 For example:
+
 ```json
 {
   "start_time": "20h00m00s",
