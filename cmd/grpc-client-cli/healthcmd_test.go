@@ -25,7 +25,7 @@ func TestHealthCheck(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			set := flag.NewFlagSet("test", 0)
-			set.Int("deadline", 15, "")
+			set.String("deadline", "15", "")
 			set.String("service", c.service, "")
 			set.Parse([]string{app_testing.TestServerAddr()})
 			ctx := cli.NewContext(nil, set, nil)

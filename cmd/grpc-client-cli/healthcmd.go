@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"github.com/urfave/cli/v2"
+	"github.com/vadimi/grpc-client-cli/internal/cliext"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -38,9 +38,13 @@ func checkHealth(c *cli.Context, out io.Writer) error {
 		return err
 	}
 
-	deadline := c.Int("deadline")
+	deadline, err := cliext.ParseDuration(c.String("deadline"))
+	if err != nil {
+		return cli.Exit(err, 1)
+	}
+
 	client := grpc_health_v1.NewHealthClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(deadline)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
 	resp, err := client.Check(ctx, &grpc_health_v1.HealthCheckRequest{
 		Service: service,
