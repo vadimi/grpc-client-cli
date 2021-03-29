@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
@@ -50,7 +51,7 @@ type testService struct {
 	grpc_testing.UnimplementedTestServiceServer
 }
 
-func (testService) EmptyCall(ctx context.Context, req *grpc_testing.Empty) (*grpc_testing.Empty, error) {
+func (testService) EmptyCall(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
 	return req, nil
 }
 
@@ -74,7 +75,10 @@ func (testService) UnaryCall(ctx context.Context, req *grpc_testing.SimpleReques
 	}
 
 	return &grpc_testing.SimpleResponse{
-		Payload: req.Payload,
+		User: &grpc_testing.User{
+			Id:   req.GetUser().GetId(),
+			Name: req.GetUser().GetName(),
+		},
 	}, nil
 }
 
@@ -84,20 +88,18 @@ func (testService) StreamingOutputCall(req *grpc_testing.StreamingOutputCallRequ
 
 	}
 
-	rsp := &grpc_testing.StreamingOutputCallResponse{Payload: &grpc_testing.Payload{}}
+	rsp := &grpc_testing.StreamingOutputCallResponse{User: &grpc_testing.User{}}
 	for _, param := range req.ResponseParameters {
 		if str.Context().Err() != nil {
 			return str.Context().Err()
 		}
 
-		respSize := len(req.GetPayload().GetBody()) * int(param.GetSize())
-		buf := make([]byte, 0, respSize)
+		buf := ""
 		for i := 0; i < int(param.GetSize()); i++ {
-			buf = append(buf, req.GetPayload().GetBody()...)
+			buf += req.GetUser().GetName()
 		}
 
-		rsp.Payload.Type = req.ResponseType
-		rsp.Payload.Body = buf
+		rsp.User.Name = buf
 
 		if err := str.Send(rsp); err != nil {
 			return err
@@ -122,7 +124,7 @@ func (testService) StreamingInputCall(str grpc_testing.TestService_StreamingInpu
 			})
 		}
 
-		size += len(req.Payload.Body)
+		size += len(req.User.Name)
 
 		if err != nil {
 			return err
@@ -151,20 +153,18 @@ func (testService) FullDuplexCall(str grpc_testing.TestService_FullDuplexCallSer
 
 		}
 
-		resp := &grpc_testing.StreamingOutputCallResponse{Payload: &grpc_testing.Payload{}}
+		resp := &grpc_testing.StreamingOutputCallResponse{User: &grpc_testing.User{}}
 		for _, param := range req.ResponseParameters {
 			if str.Context().Err() != nil {
 				return str.Context().Err()
 			}
 
-			respSize := len(req.GetPayload().GetBody()) * int(param.GetSize())
-			buf := make([]byte, 0, respSize)
+			buf := ""
 			for i := 0; i < int(param.GetSize()); i++ {
-				buf = append(buf, req.GetPayload().GetBody()...)
+				buf += req.GetUser().GetName()
 			}
 
-			resp.Payload.Type = req.ResponseType
-			resp.Payload.Body = buf
+			resp.User.Name = buf
 
 			if err := str.Send(resp); err != nil {
 				return err
@@ -189,20 +189,18 @@ func (testService) HalfDuplexCall(str grpc_testing.TestService_HalfDuplexCallSer
 	}
 
 	for _, req := range requests {
-		resp := &grpc_testing.StreamingOutputCallResponse{Payload: &grpc_testing.Payload{}}
+		resp := &grpc_testing.StreamingOutputCallResponse{User: &grpc_testing.User{}}
 		for _, param := range req.ResponseParameters {
 			if str.Context().Err() != nil {
 				return str.Context().Err()
 			}
 
-			respSize := len(req.GetPayload().GetBody()) * int(param.GetSize())
-			buf := make([]byte, 0, respSize)
+			buf := ""
 			for i := 0; i < int(param.GetSize()); i++ {
-				buf = append(buf, req.GetPayload().GetBody()...)
+				buf += req.GetUser().GetName()
 			}
 
-			resp.Payload.Type = req.ResponseType
-			resp.Payload.Body = buf
+			resp.User.Name = buf
 
 			if err := str.Send(resp); err != nil {
 				return err

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/jhump/protoreflect/grpcreflect"
+	"github.com/stretchr/testify/require"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
 )
 
@@ -45,7 +46,8 @@ func TestDiscoverCommand(t *testing.T) {
 		return
 	}
 
-	testSvc := services["grpc.testing.TestService"]
+	testSvc, ok := services["grpc_client_cli.testing.TestService"]
+	require.True(t, ok, "grpc service not found")
 	for _, m := range testSvc.GetMethods() {
 		if !strings.Contains(res, "rpc "+m.GetName()) {
 			t.Errorf("expected %s method def, got %s", m.GetName(), res)

@@ -27,7 +27,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 # check that protoc compiler exists and download it if required
-PROTOBUF_VERSION=3.14.0
+PROTOBUF_VERSION=3.15.6
 PROTOC_FILENAME=protoc-${PROTOBUF_VERSION}-${os}.zip
 PROTOC_PATH=$localbin/protoc-$PROTOBUF_VERSION
 if [ ! -d $PROTOC_PATH ] ; then
