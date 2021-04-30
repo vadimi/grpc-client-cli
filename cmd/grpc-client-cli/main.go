@@ -129,6 +129,12 @@ func main() {
 			Usage:       `If set, send keepalive pings every "keepalive-time" timeout. If not set, default grpc settings are used`,
 			DefaultText: "not set",
 		},
+		&cli.IntFlag{
+			Name: "max-receive-message-size",
+			Aliases: []string{"mrms","max-recv-msg-size"},
+			Value: 0,
+			Usage: "If greater than 0, sets the max receive message size to bytes, else uses grpc defaults (currently 4 MB)",
+		},
 	}
 
 	app.Action = baseCmd
@@ -200,6 +206,7 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.Headers = cliext.ParseMapValue(c.Generic("header"))
 	opts.KeepaliveTime = c.Duration("keepalive-time")
 	opts.Keepalive = c.Bool("keepalive")
+	opts.MaxRecvMsgSize = c.Int("max-receive-message-size")
 
 	input := c.String("input")
 

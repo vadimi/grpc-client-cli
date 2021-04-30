@@ -47,6 +47,7 @@ type GrpcConnFactorySettings struct {
 	headers       map[string][]string
 	keepalive     bool
 	keepaliveTime time.Duration
+	maxRecvMsgSize int
 }
 
 type GrpcConnFactory struct {
@@ -67,6 +68,7 @@ func WithConnCred(insecure bool, caCert string, cert string, certKey string) Con
 		s.caCert = caCert
 		s.cert = cert
 		s.certKey = certKey
+		s.maxRecvMsgSize = 0
 	}
 }
 
@@ -86,6 +88,12 @@ func WithKeepalive(keepalive bool, keepaliveTime time.Duration) ConnFactoryOptio
 	return func(s *GrpcConnFactorySettings) {
 		s.keepalive = keepalive
 		s.keepaliveTime = keepaliveTime
+	}
+}
+
+func WithMaxRecvMsgSize(messageSize int) ConnFactoryOption {
+	return func(s *GrpcConnFactorySettings) {
+		s.maxRecvMsgSize = messageSize
 	}
 }
 
@@ -136,6 +144,7 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 		)
 
 		authority := connOpts.Authority
+		
 		if f.settings.authority != "" {
 			authority = f.settings.authority
 		}
@@ -170,6 +179,10 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 			}
 
 			opts = append(opts, grpc.WithKeepaliveParams(ka))
+		}
+		
+		if f.settings.maxRecvMsgSize > 0 {
+			opts = append(opts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(f.settings.maxRecvMsgSize)))
 		}
 
 		unaryInterceptors := []grpc.UnaryClientInterceptor{}

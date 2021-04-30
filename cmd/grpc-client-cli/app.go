@@ -59,6 +59,8 @@ type startOpts struct {
 
 	Keepalive     bool
 	KeepaliveTime time.Duration
+	
+	MaxRecvMsgSize int
 
 	w io.Writer
 }
@@ -70,8 +72,13 @@ func newApp(opts *startOpts) (*app, error) {
 		rpc.WithAuthority(opts.Authority),
 		rpc.WithKeepalive(opts.Keepalive, opts.KeepaliveTime),
 	}
+	
 	if opts.TLS {
 		connOpts = append(connOpts, rpc.WithConnCred(opts.Insecure, opts.CACert, opts.Cert, opts.CertKey))
+	}
+	
+	if opts.MaxRecvMsgSize > 0 { 
+		connOpts = append(connOpts, rpc.WithMaxRecvMsgSize(opts.MaxRecvMsgSize))
 	}
 
 	if len(opts.Headers) > 0 {
