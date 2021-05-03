@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	appVersion = "1.8.0"
+	appVersion = "1.9.0"
 )
 
 func main() {
@@ -130,10 +130,10 @@ func main() {
 			DefaultText: "not set",
 		},
 		&cli.IntFlag{
-			Name: "max-receive-message-size",
-			Aliases: []string{"mrms","max-recv-msg-size"},
-			Value: 0,
-			Usage: "If greater than 0, sets the max receive message size to bytes, else uses grpc defaults (currently 4 MB)",
+			Name:    "max-receive-message-size",
+			Aliases: []string{"mrms", "max-recv-msg-size"},
+			Value:   0,
+			Usage:   "If greater than 0, sets the max receive message size to bytes, else uses grpc defaults (currently 4 MB)",
 		},
 	}
 
