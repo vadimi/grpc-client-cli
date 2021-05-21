@@ -12,7 +12,7 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
 	golang.org/x/text v0.3.6
-	google.golang.org/grpc v1.37.1
+	google.golang.org/grpc v1.38.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.8
