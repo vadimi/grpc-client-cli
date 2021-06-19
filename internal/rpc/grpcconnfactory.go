@@ -3,8 +3,8 @@ package rpc
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -270,7 +270,7 @@ func getCredentials(insecure bool, caCert, cert, certKey string) (credentials.Tr
 	if insecure {
 		tlsCfg.InsecureSkipVerify = true
 	} else if caCert != "" {
-		b, err := ioutil.ReadFile(caCert)
+		b, err := os.ReadFile(caCert)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to read the CA certificate")
 		}

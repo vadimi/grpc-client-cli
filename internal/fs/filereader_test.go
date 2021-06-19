@@ -2,7 +2,7 @@ package fs
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"testing"
 )
 
@@ -32,8 +32,8 @@ func TestNoBomReaderWithBom(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			r := bytes.NewReader(test.src)
 
-			br, _ := NewReader(ioutil.NopCloser(r))
-			result, _ := ioutil.ReadAll(br)
+			br, _ := NewReader(io.NopCloser(r))
+			result, _ := io.ReadAll(br)
 
 			if string(result) != "TEST" {
 				t.Errorf("expected TEST, got %s", result)

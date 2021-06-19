@@ -3,7 +3,7 @@ package caller
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 
@@ -107,7 +107,7 @@ func findProtoFiles(paths []string) ([]string, error) {
 			continue
 		}
 
-		files, err := ioutil.ReadDir(p)
+		files, err := os.ReadDir(p)
 		if err != nil {
 			return nil, err
 		}

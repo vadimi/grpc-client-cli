@@ -6,9 +6,9 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -371,7 +371,7 @@ func getCreds(mTLS bool) (grpc.ServerOption, error) {
 	}
 
 	certPool := x509.NewCertPool()
-	bs, err := ioutil.ReadFile("../../testdata/certs/test_ca.crt")
+	bs, err := os.ReadFile("../../testdata/certs/test_ca.crt")
 	if err != nil {
 		log.Fatalf("failed to read client ca cert: %s", err)
 	}
