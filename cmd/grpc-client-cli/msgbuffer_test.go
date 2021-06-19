@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/spyzhov/ajson"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
@@ -41,7 +40,7 @@ func (mr *testMsgReader) ReadLine(names []string, opts ...ReadLineOpt) ([]byte, 
 func TestProtoCmdMsgBuffer(t *testing.T) {
 	rl := newTestMsgReader([]testMsg{
 		{[]byte("??"), nil},
-		{nil, terminal.InterruptErr},
+		{nil, ErrInterruptTerm},
 	})
 
 	req := &grpc_testing.SimpleRequest{}
@@ -59,7 +58,7 @@ func TestProtoCmdMsgBuffer(t *testing.T) {
 	})
 
 	_, err = b.ReadMessage()
-	if err != nil && err != terminal.InterruptErr {
+	if err != nil && err != ErrInterruptTerm {
 		t.Fatal(err)
 	}
 
@@ -71,7 +70,7 @@ func TestProtoCmdMsgBuffer(t *testing.T) {
 func TestHelpCmdMsgBuffer(t *testing.T) {
 	rl := newTestMsgReader([]testMsg{
 		{[]byte("?"), nil},
-		{nil, terminal.InterruptErr},
+		{nil, ErrInterruptTerm},
 	})
 
 	req := &grpc_testing.SimpleRequest{}
@@ -89,7 +88,7 @@ func TestHelpCmdMsgBuffer(t *testing.T) {
 	})
 
 	_, err = b.ReadMessage()
-	if err != nil && err != terminal.InterruptErr {
+	if err != nil && err != ErrInterruptTerm {
 		t.Fatal(err)
 	}
 

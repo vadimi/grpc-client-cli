@@ -8,7 +8,6 @@ import (
 	"os"
 	"sort"
 
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoprint"
@@ -52,8 +51,8 @@ func (b *msgBuffer) ReadMessage(opts ...ReadLineOpt) ([]byte, error) {
 	for {
 		message, err := b.opts.reader.ReadLine(b.fieldNames, opts...)
 		if err != nil {
-			if err == terminal.InterruptErr {
-				return nil, terminal.InterruptErr
+			if err == ErrInterruptTerm {
+				return nil, ErrInterruptTerm
 			}
 			return message, err
 		}
@@ -91,8 +90,8 @@ func (b *msgBuffer) ReadMessages() ([][]byte, error) {
 
 	for {
 		msg, err := b.ReadMessage(WithReadLinePrompt(b.nextPrompt))
-		if err == terminal.InterruptErr {
-			return nil, terminal.InterruptErr
+		if err == ErrInterruptTerm {
+			return nil, ErrInterruptTerm
 		}
 
 		// Ctrl+D will trigger io.EOF if the line is empty

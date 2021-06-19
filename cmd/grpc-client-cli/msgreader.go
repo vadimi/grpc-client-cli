@@ -9,7 +9,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/peterh/liner"
 )
 
@@ -99,7 +98,7 @@ func (r *msgReader) ReadLine(names []string, opts ...ReadLineOpt) ([]byte, error
 	msg, err := r.line.Prompt(prompt)
 	if err != nil {
 		if err == liner.ErrPromptAborted {
-			return nil, terminal.InterruptErr
+			return nil, ErrInterruptTerm
 		}
 		return nil, err
 	}

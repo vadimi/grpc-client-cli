@@ -235,7 +235,7 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 
 	err = a.Start(message)
 
-	if err != nil && err != terminal.InterruptErr {
+	if err != nil && err != terminal.InterruptErr && err != ErrInterruptTerm {
 		return err
 	}
 
