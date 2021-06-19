@@ -5,11 +5,11 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/spyzhov/ajson"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"google.golang.org/grpc/interop/grpc_testing"
-	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 type testMsg struct {

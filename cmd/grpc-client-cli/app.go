@@ -12,13 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
-	survey "gopkg.in/AlecAivazis/survey.v1"
-	"gopkg.in/AlecAivazis/survey.v1/core"
 )
 
 var (
@@ -59,25 +58,23 @@ type startOpts struct {
 
 	Keepalive     bool
 	KeepaliveTime time.Duration
-	
+
 	MaxRecvMsgSize int
 
 	w io.Writer
 }
 
 func newApp(opts *startOpts) (*app, error) {
-	core.SelectFocusIcon = "→"
-
 	connOpts := []rpc.ConnFactoryOption{
 		rpc.WithAuthority(opts.Authority),
 		rpc.WithKeepalive(opts.Keepalive, opts.KeepaliveTime),
 	}
-	
+
 	if opts.TLS {
 		connOpts = append(connOpts, rpc.WithConnCred(opts.Insecure, opts.CACert, opts.Cert, opts.CertKey))
 	}
-	
-	if opts.MaxRecvMsgSize > 0 { 
+
+	if opts.MaxRecvMsgSize > 0 {
 		connOpts = append(connOpts, rpc.WithMaxRecvMsgSize(opts.MaxRecvMsgSize))
 	}
 
@@ -297,7 +294,7 @@ func (a *app) selectService(name string) (string, error) {
 		Message:  "Choose a service:",
 		Options:  serviceNames,
 		PageSize: 20,
-	}, &service, survey.Required)
+	}, &service, survey.WithValidator(survey.Required), surveyIcons())
 	return service, err
 }
 
@@ -334,7 +331,7 @@ func (a *app) selectMethod(s *caller.ServiceMeta, name string) (*desc.MethodDesc
 		Message:  "Choose a method:",
 		Options:  methodNames,
 		PageSize: 20,
-	}, &methodName, survey.Required)
+	}, &methodName, survey.WithValidator(survey.Required), surveyIcons())
 	if err != nil {
 		return nil, err
 	}
@@ -386,4 +383,10 @@ func toJSONArray(msg []byte) ([][]byte, error) {
 	}
 
 	return result, nil
+}
+
+func surveyIcons() survey.AskOpt {
+	return survey.WithIcons(func(icons *survey.IconSet) {
+		icons.SelectFocus.Text = "→"
+	})
 }

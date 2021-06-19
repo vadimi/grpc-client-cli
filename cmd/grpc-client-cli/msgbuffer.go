@@ -8,12 +8,12 @@ import (
 	"os"
 	"sort"
 
+	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
-	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 type msgBuffer struct {

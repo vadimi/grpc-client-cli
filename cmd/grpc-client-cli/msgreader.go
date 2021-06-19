@@ -9,8 +9,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/peterh/liner"
-	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 type msgReaderSettings struct {
