@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEnumValue(t *testing.T) {
@@ -11,7 +12,7 @@ func TestEnumValue(t *testing.T) {
 		Enum: []string{"v1", "v2"},
 	}
 
-	ev.Set("v1")
+	require.NoError(t, ev.Set("v1"))
 
 	assert.Equal(t, "v1", ev.String())
 }

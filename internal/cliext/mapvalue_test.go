@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMapValue(t *testing.T) {
 	mv := NewMapValue()
-	mv.Set("a: b")
-	mv.Set("c: d")
+	require.NoError(t, mv.Set("a: b"))
+	require.NoError(t, mv.Set("c: d"))
 
 	res := ParseMapValue(mv)
 
@@ -19,8 +20,8 @@ func TestMapValue(t *testing.T) {
 
 func TestMapValueMulti(t *testing.T) {
 	mv := NewMapValue()
-	mv.Set("a: b")
-	mv.Set("a: d")
+	require.NoError(t, mv.Set("a: b"))
+	require.NoError(t, mv.Set("a: d"))
 
 	res := ParseMapValue(mv)
 
@@ -29,12 +30,12 @@ func TestMapValueMulti(t *testing.T) {
 
 func TestMapValueSerialize(t *testing.T) {
 	mv := NewMapValue()
-	mv.Set("a: b")
-	mv.Set("c: d")
+	require.NoError(t, mv.Set("a: b"))
+	require.NoError(t, mv.Set("c: d"))
 
 	serialied := mv.Serialize()
 
-	mv.Set(serialied)
+	require.NoError(t, mv.Set(serialied))
 
 	res := ParseMapValue(mv)
 

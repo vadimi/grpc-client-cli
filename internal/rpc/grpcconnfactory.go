@@ -38,15 +38,15 @@ type connMeta struct {
 }
 
 type GrpcConnFactorySettings struct {
-	tls           bool
-	insecure      bool
-	caCert        string
-	cert          string
-	certKey       string
-	authority     string
-	headers       map[string][]string
-	keepalive     bool
-	keepaliveTime time.Duration
+	tls            bool
+	insecure       bool
+	caCert         string
+	cert           string
+	certKey        string
+	authority      string
+	headers        map[string][]string
+	keepalive      bool
+	keepaliveTime  time.Duration
 	maxRecvMsgSize int
 }
 
@@ -144,7 +144,7 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 		)
 
 		authority := connOpts.Authority
-		
+
 		if f.settings.authority != "" {
 			authority = f.settings.authority
 		}
@@ -164,7 +164,10 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 				return
 			}
 			if authority != "" {
-				creds.OverrideServerName(authority)
+				if err := creds.OverrideServerName(authority); err != nil {
+					conn.dialErr = err
+					return
+				}
 			}
 			opts = append(opts, grpc.WithTransportCredentials(creds))
 		}
@@ -180,7 +183,7 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 
 			opts = append(opts, grpc.WithKeepaliveParams(ka))
 		}
-		
+
 		if f.settings.maxRecvMsgSize > 0 {
 			opts = append(opts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(f.settings.maxRecvMsgSize)))
 		}
