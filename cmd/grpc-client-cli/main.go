@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/AlecAivazis/survey/v2/terminal"
@@ -267,7 +267,7 @@ func readMessageFromstdin() ([]byte, error) {
 
 	// only read from stdin if there is something to read
 	if s.Mode()&os.ModeNamedPipe != 0 {
-		bytes, err := ioutil.ReadAll(os.Stdin)
+		bytes, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			return nil, err
 		}
@@ -283,7 +283,7 @@ func readMessageFile(file string) ([]byte, error) {
 		return nil, nil
 	}
 
-	f, err := ioutil.ReadFile(file)
+	f, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}

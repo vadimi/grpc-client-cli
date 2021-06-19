@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/spyzhov/ajson"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
 )
@@ -27,7 +28,7 @@ func TestHealthCheck(t *testing.T) {
 			set := flag.NewFlagSet("test", 0)
 			set.String("deadline", "15", "")
 			set.String("service", c.service, "")
-			set.Parse([]string{app_testing.TestServerAddr()})
+			require.NoError(t, set.Parse([]string{app_testing.TestServerAddr()}))
 			ctx := cli.NewContext(nil, set, nil)
 
 			buf := &bytes.Buffer{}
@@ -43,15 +44,8 @@ func TestHealthCheck(t *testing.T) {
 
 			res := buf.Bytes()
 			root, err := ajson.Unmarshal(res)
-			if err != nil {
-				t.Errorf("error unmarshaling result json: %v", err)
-				return
-			}
-
-			if jsonString(root, "$.status") != c.expStatus {
-				t.Errorf("invalid health check status: %s, expected: %s", res, c.expStatus)
-				return
-			}
+			require.NoError(t, err, "error unmarshaling result json")
+			require.Equal(t, c.expStatus, jsonString(root, "$.status"), "invalid heath check status")
 		})
 	}
 }
@@ -71,7 +65,7 @@ func TestHealthCheckError(t *testing.T) {
 			set := flag.NewFlagSet("test", 0)
 			set.Int("deadline", 15, "")
 			set.String("service", c.service, "")
-			set.Parse([]string{app_testing.TestServerAddr()})
+			require.NoError(t, set.Parse([]string{app_testing.TestServerAddr()}))
 			ctx := cli.NewContext(nil, set, nil)
 
 			buf := &bytes.Buffer{}
