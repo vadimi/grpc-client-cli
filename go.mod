@@ -1,7 +1,7 @@
 module github.com/vadimi/grpc-client-cli
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.2.12
+	github.com/AlecAivazis/survey/v2 v2.2.14
 	github.com/ArthurHlt/go-eureka-client v1.1.0
 	github.com/golang/protobuf v1.5.2
 	github.com/gookit/color v1.4.2
@@ -13,9 +13,9 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/net v0.0.0-20210610132358-84b48f89b13b
 	golang.org/x/text v0.3.6
-	google.golang.org/grpc v1.38.0
+	google.golang.org/grpc v1.39.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.27.1
 )
 
-go 1.13
+go 1.16
