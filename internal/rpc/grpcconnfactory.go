@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"context"
 	"github.com/pkg/errors"
-	"golang.org/x/net/context"
 
 	"github.com/vadimi/grpc-client-cli/internal/resolver/eureka"
 	"google.golang.org/grpc"
