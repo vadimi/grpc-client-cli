@@ -1,6 +1,7 @@
 package caller
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -28,7 +29,7 @@ func NewServiceMetadataProto(protoPath, protoImports []string) ServiceMetaData {
 	}
 }
 
-func (smp *serviceMetadataProto) GetServiceMetaDataList() ([]*ServiceMeta, error) {
+func (smp *serviceMetadataProto) GetServiceMetaDataList(ctx context.Context) ([]*ServiceMeta, error) {
 	fileDesc, err := parseProtoFiles(smp.protoPath, smp.protoImports)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing proto files: %w", err)

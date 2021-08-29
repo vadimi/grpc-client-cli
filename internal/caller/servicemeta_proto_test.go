@@ -1,6 +1,7 @@
 package caller
 
 import (
+	"context"
 	"testing"
 )
 
@@ -18,7 +19,7 @@ func TestMetaDataListSingleFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svcMeta := NewServiceMetadataProto([]string{tt.protoPath}, nil)
-			services, err := svcMeta.GetServiceMetaDataList()
+			services, err := svcMeta.GetServiceMetaDataList(context.Background())
 			if err != nil {
 				t.Error(err)
 				return
@@ -79,7 +80,7 @@ func TestMetaDataListMultipleFiles(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svcMeta := NewServiceMetadataProto(tt.protoPath, tt.thirdParty)
-			services, err := svcMeta.GetServiceMetaDataList()
+			services, err := svcMeta.GetServiceMetaDataList(context.Background())
 			if err != nil {
 				t.Error(err)
 				return

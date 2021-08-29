@@ -11,7 +11,7 @@ import (
 )
 
 type ServiceMetaData interface {
-	GetServiceMetaDataList() ([]*ServiceMeta, error)
+	GetServiceMetaDataList(context.Context) ([]*ServiceMeta, error)
 }
 
 type serviceMetaData struct {
@@ -36,15 +36,15 @@ func NewServiceMetaData(connFact *rpc.GrpcConnFactory, target string, deadline i
 	}
 }
 
-func (s *serviceMetaData) GetServiceMetaDataList() ([]*ServiceMeta, error) {
+func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) ([]*ServiceMeta, error) {
 	conn, err := s.connFact.GetConn(s.target)
 	if err != nil {
 		return nil, err
 	}
 	rpbclient := rpb.NewServerReflectionClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.deadline)*time.Second)
+	callctx, cancel := context.WithTimeout(ctx, time.Duration(s.deadline)*time.Second)
 	defer cancel()
-	rc := grpcreflect.NewClient(ctx, rpbclient)
+	rc := grpcreflect.NewClient(callctx, rpbclient)
 
 	services, err := rc.ListServices()
 	if err != nil {
@@ -63,7 +63,7 @@ func (s *serviceMetaData) GetServiceMetaDataList() ([]*ServiceMeta, error) {
 		if err != nil {
 			rc.Reset()
 			// try only once here
-			rc = grpcreflect.NewClient(ctx, rpbclient)
+			rc = grpcreflect.NewClient(callctx, rpbclient)
 			svcDesc, err = rc.ResolveService(svc)
 			if err != nil {
 				defer rc.Reset()

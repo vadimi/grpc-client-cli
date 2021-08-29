@@ -20,9 +20,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var (
-	NoMethodErr = errors.New("no method")
-)
+var NoMethodErr = errors.New("no method")
 
 type app struct {
 	connFact      *rpc.GrpcConnFactory
@@ -100,8 +98,13 @@ func newApp(opts *startOpts) (*app, error) {
 	} else {
 		svc = caller.NewServiceMetaData(a.connFact, a.opts.Target, a.opts.Deadline)
 	}
-	services, err := svc.GetServiceMetaDataList()
+
+	ctx := rpc.WithStatsCtx(context.Background())
+	services, err := svc.GetServiceMetaDataList(ctx)
 	if err != nil {
+		if a.opts.Verbose {
+			printVerbose(a.w, rpc.ExtractRpcStats(ctx), err)
+		}
 		return nil, err
 	}
 
@@ -111,7 +114,6 @@ func newApp(opts *startOpts) (*app, error) {
 		Prompt:      fmt.Sprintf("Message %s (type ? to see defaults): ", a.opts.InFormat.String()),
 		HistoryFile: os.TempDir() + "/grpc-client-cli.tmp",
 	})
-
 	if err != nil {
 		return nil, err
 	}
