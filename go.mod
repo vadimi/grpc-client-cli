@@ -1,7 +1,7 @@
 module github.com/vadimi/grpc-client-cli
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.2.16
+	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/ArthurHlt/go-eureka-client v1.1.0
 	github.com/golang/protobuf v1.5.2
 	github.com/gookit/color v1.4.2

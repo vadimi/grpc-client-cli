@@ -1,7 +1,7 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
-github.com/AlecAivazis/survey/v2 v2.2.16 h1:KJ4fLFqY/NfR5OaFLcf4pThxrlV2YCHGCnCHAKLsJ+U=
-github.com/AlecAivazis/survey/v2 v2.2.16/go.mod h1:TH2kPCDU3Kqq7pLbnCWwZXDBjnhZtmsCle5EiYDJ2fg=
+github.com/AlecAivazis/survey/v2 v2.3.2 h1:TqTB+aDDCLYhf9/bD2TwSO8u8jDSmMUd2SUVO4gCnU8=
+github.com/AlecAivazis/survey/v2 v2.3.2/go.mod h1:TH2kPCDU3Kqq7pLbnCWwZXDBjnhZtmsCle5EiYDJ2fg=
 github.com/ArthurHlt/go-eureka-client v1.1.0 h1:/DDFNFnuTDKYe5EmtYelwY4cen4/x4VGcNFlPsc1lok=
 github.com/ArthurHlt/go-eureka-client v1.1.0/go.mod h1:p5lb6TsmZkMgIAEVpeWefmTeyYXKiN97DkOJrBPKd+8=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
