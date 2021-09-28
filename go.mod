@@ -5,7 +5,7 @@ require (
 	github.com/ArthurHlt/go-eureka-client v1.1.0
 	github.com/golang/protobuf v1.5.2
 	github.com/gookit/color v1.4.2
-	github.com/jhump/protoreflect v1.9.0
+	github.com/jhump/protoreflect v1.10.0
 	github.com/peterh/liner v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/spyzhov/ajson v0.4.2
