@@ -8,16 +8,16 @@
 
 Download the binary and install it to `/usr/local` directory:
 
-- `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.10.0/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local/bin -xz`
+- `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.11.0/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local/bin -xz`
 
 For go `1.16+` use this command to install the app to `$GOPATH/bin` directory:
 
-- `go install github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.10.0`
+- `go install github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.11.0`
 
 Or use "go get" approach:
 
 - `GO111MODULE=on go get -u github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@latest`
-- `GO111MODULE=on go get -u github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.10.0`
+- `GO111MODULE=on go get -u github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.11.0`
 
 ## Usage
 
