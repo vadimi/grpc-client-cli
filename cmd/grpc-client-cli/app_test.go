@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"github.com/jhump/protoreflect/desc"
-	"github.com/pkg/errors"
 	"github.com/spyzhov/ajson"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,7 +44,6 @@ func runAppServiceCalls(t *testing.T, appOpts *startOpts) {
 	buf := &bytes.Buffer{}
 	appOpts.w = buf
 	app, err := newApp(appOpts)
-
 	if err != nil {
 		t.Error(err)
 		return
@@ -123,7 +122,7 @@ func appCallUnaryServerError(t *testing.T, app *app) {
 		return
 	}
 
-	s, _ := status.FromError(errors.Cause(err))
+	s, _ := status.FromError(errors.Unwrap(err))
 	if s.Code() != codes.Code(errCode) {
 		t.Errorf("expectd status code %v, got %v, err: %v", codes.Code(errCode), s.Code(), err)
 	}
@@ -268,7 +267,7 @@ func appCallBidiStreamErrorProcessing(t *testing.T, app *app, buf *bytes.Buffer)
 		t.Fatal("error expected, got nil")
 	}
 
-	s, _ := status.FromError(errors.Cause(err))
+	s, _ := status.FromError(errors.Unwrap(err))
 	if s.Code() != codes.Code(errCode) {
 		t.Fatalf("expected status code %v, got %v", codes.Code(errCode), s.Code())
 	}
@@ -322,7 +321,7 @@ func appCallBidiStreamError(t *testing.T, app *app, buf *bytes.Buffer) {
 		return
 	}
 
-	s, _ := status.FromError(errors.Cause(err))
+	s, _ := status.FromError(errors.Unwrap(err))
 	if s.Code() != codes.Code(errCode) {
 		t.Errorf("expectd status code %v, got %v, err: %v", codes.Code(errCode), s.Code(), err)
 		return
@@ -419,7 +418,7 @@ func appCallStreamOutputError(t *testing.T, app *app) {
 		return
 	}
 
-	s, _ := status.FromError(errors.Cause(err))
+	s, _ := status.FromError(errors.Unwrap(err))
 	if s.Code() != codes.Code(errCode) {
 		t.Errorf("expectd status code %v, got %v", codes.Code(errCode), s.Code())
 	}
@@ -460,7 +459,7 @@ func appCallClientStreamError(t *testing.T, app *app) {
 		return
 	}
 
-	s, _ := status.FromError(errors.Cause(err))
+	s, _ := status.FromError(errors.Unwrap(err))
 	if s.Code() != codes.Code(errCode) {
 		t.Errorf("expectd status code %v, got %v", codes.Code(errCode), s.Code())
 	}
@@ -561,7 +560,6 @@ func TestStatsHandler(t *testing.T) {
 			"test_multi": {"a1", "a2"},
 		},
 	})
-
 	if err != nil {
 		t.Error(err)
 		return
@@ -660,7 +658,6 @@ func TestAuthorityHeader(t *testing.T) {
 				IsInteractive: false,
 				w:             buf,
 			})
-
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -723,7 +720,8 @@ func checkStatsInOutput(t *testing.T, app *app, msg []byte, buf *bytes.Buffer) {
 
 	res := buf.String()
 
-	expected := []string{"Request duration:", "Request size:", "Response size:",
+	expected := []string{
+		"Request duration:", "Request size:", "Response size:",
 		"Status:", "Request Headers:", "Response Headers:",
 		"Method:",
 	}

@@ -7,7 +7,6 @@ require (
 	github.com/gookit/color v1.5.0
 	github.com/jhump/protoreflect v1.10.1
 	github.com/peterh/liner v1.2.1
-	github.com/pkg/errors v0.9.1
 	github.com/spyzhov/ajson v0.5.0
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0

@@ -1,16 +1,16 @@
 package rpc
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strings"
 	"sync"
 	"time"
-
-	"context"
-	"github.com/pkg/errors"
 
 	"github.com/vadimi/grpc-client-cli/internal/resolver/eureka"
 	"google.golang.org/grpc"
@@ -272,7 +272,7 @@ func getCredentials(insecure bool, caCert, cert, certKey string) (credentials.Tr
 	} else if caCert != "" {
 		b, err := os.ReadFile(caCert)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read the CA certificate")
+			return nil, fmt.Errorf("failed to read the CA certificate: %w", err)
 		}
 		cp := x509.NewCertPool()
 		if !cp.AppendCertsFromPEM(b) {
@@ -284,7 +284,7 @@ func getCredentials(insecure bool, caCert, cert, certKey string) (credentials.Tr
 	if cert != "" && certKey != "" {
 		certificate, err := tls.LoadX509KeyPair(cert, certKey)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read the client certificate")
+			return nil, fmt.Errorf("failed to read the client certificate: %w", err)
 		}
 		tlsCfg.Certificates = append(tlsCfg.Certificates, certificate)
 	} else if cert != "" || certKey != "" {

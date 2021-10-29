@@ -1,18 +1,17 @@
 package caller
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/pkg/errors"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/status"
-
-	"context"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
@@ -149,7 +148,7 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 
 		err := sc.unmarshalMessage(msg, reqMsg)
 		if err != nil {
-			errChan <- newCallerError(errors.Wrapf(err, "invalid input %s", sc.inMsgFormat.String()))
+			errChan <- newCallerError(fmt.Errorf("invalid input %s: %w", sc.inMsgFormat.String(), err))
 			return nil, errChan
 		}
 
