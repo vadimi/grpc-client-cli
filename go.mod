@@ -7,11 +7,11 @@ require (
 	github.com/gookit/color v1.5.0
 	github.com/jhump/protoreflect v1.10.1
 	github.com/peterh/liner v1.2.1
-	github.com/spyzhov/ajson v0.5.0
+	github.com/spyzhov/ajson v0.6.0
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/text v0.3.7
-	google.golang.org/grpc v1.41.0
+	google.golang.org/grpc v1.42.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.27.1
 )
