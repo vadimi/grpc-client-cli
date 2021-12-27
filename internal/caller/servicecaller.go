@@ -214,6 +214,7 @@ func (sc *ServiceCaller) marshalMessage(msg *dynamic.Message) ([]byte, error) {
 		EmitDefaults: true,
 		Indent:       "  ",
 		OrigName:     true,
+		AnyResolver:  &anyResolver{},
 	})
 }
 
