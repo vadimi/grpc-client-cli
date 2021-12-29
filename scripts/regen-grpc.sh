@@ -27,7 +27,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 # check that protoc compiler exists and download it if required
-PROTOBUF_VERSION=3.15.6
+PROTOBUF_VERSION=3.19.1
 PROTOC_FILENAME=protoc-${PROTOBUF_VERSION}-${os}.zip
 PROTOC_PATH=$localbin/protoc-$PROTOBUF_VERSION
 if [ ! -d $PROTOC_PATH ] ; then
@@ -42,7 +42,5 @@ fi
 GOBIN=$localbin go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 GOBIN=$localbin go install google.golang.org/protobuf/cmd/protoc-gen-go
 
-GOOGLE_PROTO_DIR=$PROTOC_PATH/include/google/protobuf
-
-PATH=$PATH:$localbin $PROTOC_PATH/bin/protoc --go_out=$cwd/../internal/testing/grpc_testing --go-grpc_out=require_unimplemented_servers=false:$cwd/../internal/testing/grpc_testing -I$GOOGLE_PROTO_DIR:"$cwd/../testdata" $cwd/../testdata/test.proto
+PATH=$PATH:$localbin $PROTOC_PATH/bin/protoc --go_out=$cwd/../internal/testing/grpc_testing --go-grpc_out=require_unimplemented_servers=false:$cwd/../internal/testing/grpc_testing -I"$cwd/../testdata" $cwd/../testdata/test.proto
 
