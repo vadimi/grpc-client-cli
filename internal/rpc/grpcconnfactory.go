@@ -15,6 +15,7 @@ import (
 	"github.com/vadimi/grpc-client-cli/internal/resolver/eureka"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	_ "google.golang.org/grpc/encoding/gzip" // register gzip compressor
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
@@ -149,28 +150,21 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 			authority = f.settings.authority
 		}
 
-		if !f.settings.tls {
-			opts = append(opts, grpc.WithInsecure())
+		// if we have a proxy use it as our service target and pass original target to :authority header
+		// WithAuthority supports both TLS and insecure connections
+		if authority != "" {
+			opts = append(opts, grpc.WithAuthority(authority))
+		}
 
-			// if we have a proxy use it as our service target and pass original target to :authority header
-			// override authority for non TLS connection only
-			if authority != "" {
-				opts = append(opts, grpc.WithAuthority(authority))
-			}
-		} else {
-			creds, err := getCredentials(f.settings.insecure, f.settings.caCert, f.settings.cert, f.settings.certKey)
+		creds := insecure.NewCredentials()
+		if f.settings.tls {
+			creds, err = getCredentials(f.settings.insecure, f.settings.caCert, f.settings.cert, f.settings.certKey)
 			if err != nil {
 				conn.dialErr = err
 				return
 			}
-			if authority != "" {
-				if err := creds.OverrideServerName(authority); err != nil {
-					conn.dialErr = err
-					return
-				}
-			}
-			opts = append(opts, grpc.WithTransportCredentials(creds))
 		}
+		opts = append(opts, grpc.WithTransportCredentials(creds))
 
 		if f.settings.keepalive {
 			ka := keepalive.ClientParameters{
