@@ -1,29 +1,32 @@
 package caller
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+)
 
 func toLowerCamelCase(s string) string {
-	n := ""
+	res := strings.Builder{}
 	capNext := false
-	for _, v := range s {
+	for _, v := range []byte(s) {
 		if v >= 'A' && v <= 'Z' {
-			n += string(v)
+			res.WriteByte(v)
 		}
 		if v >= '0' && v <= '9' {
-			n += string(v)
+			res.WriteByte(v)
 		}
 		if v >= 'a' && v <= 'z' {
 			if capNext {
-				n += strings.ToUpper(string(v))
+				res.WriteRune(unicode.ToUpper(rune(v)))
 			} else {
-				n += string(v)
+				res.WriteByte(v)
 			}
 		}
+
+		capNext = false
 		if v == '_' || v == ' ' || v == '-' {
 			capNext = true
-		} else {
-			capNext = false
 		}
 	}
-	return n
+	return res.String()
 }
