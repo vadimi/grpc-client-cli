@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -20,7 +21,18 @@ import (
 	"google.golang.org/grpc"
 )
 
-var NoMethodErr = errors.New("no method")
+const (
+	MaxCallMsgSize = math.MaxInt32
+)
+
+var (
+	DefaultCallOptions = []grpc.CallOption{
+		grpc.WaitForReady(true),
+		grpc.MaxCallRecvMsgSize(MaxCallMsgSize),
+		grpc.MaxCallSendMsgSize(MaxCallMsgSize),
+	}
+	NoMethodErr        = errors.New("no method")
+)
 
 type app struct {
 	connFact      *rpc.GrpcConnFactory
@@ -236,7 +248,13 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 func (a *app) callClientStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
 	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat)
 
-	result, err := serviceCaller.CallClientStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
+	result, err := serviceCaller.CallClientStream(
+		ctx,
+		a.opts.Target,
+		method,
+		messageJSON,
+		DefaultCallOptions...,
+	)
 	if err != nil {
 		return err
 	}
@@ -254,7 +272,13 @@ func (a *app) printResult(r []byte) {
 // callStream calls both server or bi-directional stream methods
 func (a *app) callStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
 	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat)
-	result, errChan := serviceCaller.CallStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
+	result, errChan := serviceCaller.CallStream(
+		ctx,
+		a.opts.Target,
+		method,
+		messageJSON,
+		DefaultCallOptions...,
+	)
 
 	a.printer.BeginArray()
 	cnt := 0
