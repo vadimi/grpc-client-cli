@@ -257,16 +257,16 @@ func (a *app) callStream(ctx context.Context, method *desc.MethodDescriptor, mes
 	result, errChan := serviceCaller.CallStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 
 	a.printer.BeginArray()
-	cnt := 0
+	next := false
 	for {
 		select {
 		case r := <-result:
 			if r != nil {
-				if cnt > 0 {
+				if next {
 					a.printer.ArrayDelim()
 				}
 				a.printer.WriteMessage(r)
-				cnt++
+				next = true
 			}
 		case err := <-errChan:
 			a.printer.EndArray()
