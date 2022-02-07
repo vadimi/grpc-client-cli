@@ -39,8 +39,8 @@ type anyWrapper struct {
 }
 
 func (a *anyWrapper) Unmarshal(b []byte) error {
-	a.Message.SetFieldByName("value", b)
-	a.Message.SetFieldByName("err", "type not found")
+	a.SetFieldByName("value", b)
+	a.SetFieldByName("err", "type not found")
 	return nil
 }
 
