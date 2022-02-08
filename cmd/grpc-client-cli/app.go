@@ -20,7 +20,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var NoMethodErr = errors.New("no method")
+var errNoMethod = errors.New("no method")
 
 type app struct {
 	connFact      *rpc.GrpcConnFactory
@@ -136,7 +136,7 @@ func (a *app) Start(message []byte) error {
 
 		method, err := a.selectMethod(a.getService(service), a.opts.Method)
 		if err != nil {
-			if err == NoMethodErr {
+			if err == errNoMethod {
 				continue
 			}
 			return err
@@ -339,7 +339,7 @@ func (a *app) selectMethod(s *caller.ServiceMeta, name string) (*desc.MethodDesc
 	}
 
 	if methodName == noMethod {
-		return nil, NoMethodErr
+		return nil, errNoMethod
 	}
 
 	for _, m := range s.Methods {
