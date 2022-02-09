@@ -23,10 +23,16 @@ func init() {
 
 // anyResolver resolves types specified in typeURL/@type field of google.protobuf.Any message
 // or falls back to the one that just represents Any message with an error field
-type anyResolver struct{}
+type anyResolver struct {
+	fdescCache *FileDescCache
+}
 
 func (a *anyResolver) Resolve(typeURL string) (proto.Message, error) {
-	baseResolver := dynamic.AnyResolver(nil)
+	files := []*desc.FileDescriptor{}
+	if a.fdescCache != nil {
+		files = a.fdescCache.Files()
+	}
+	baseResolver := dynamic.AnyResolver(dynamic.NewMessageFactoryWithDefaults(), files...)
 	m, err := baseResolver.Resolve(typeURL)
 	if err == nil {
 		return m, nil

@@ -25,6 +25,7 @@ var errNoMethod = errors.New("no method")
 type app struct {
 	connFact      *rpc.GrpcConnFactory
 	servicesList  []*caller.ServiceMeta
+	fdescCache    *caller.FileDescCache
 	messageReader *msgReader
 	opts          *startOpts
 	w             io.Writer
@@ -107,6 +108,8 @@ func newApp(opts *startOpts) (*app, error) {
 		}
 		return nil, err
 	}
+
+	a.fdescCache = caller.NewFileDescCache(services)
 
 	a.servicesList = services
 
@@ -234,7 +237,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 
 // callClientStream calls unary or client stream method
 func (a *app) callClientStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat)
+	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.fdescCache)
 
 	result, err := serviceCaller.CallClientStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 	if err != nil {
@@ -253,7 +256,7 @@ func (a *app) printResult(r []byte) {
 
 // callStream calls both server or bi-directional stream methods
 func (a *app) callStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat)
+	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.fdescCache)
 	result, errChan := serviceCaller.CallStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 
 	a.printer.BeginArray()

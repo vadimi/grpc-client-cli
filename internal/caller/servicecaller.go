@@ -83,13 +83,15 @@ type ServiceCaller struct {
 	connFact     *rpc.GrpcConnFactory
 	inMsgFormat  MsgFormat
 	outMsgFormat MsgFormat
+	fdescCache   *FileDescCache
 }
 
-func NewServiceCaller(connFact *rpc.GrpcConnFactory, inMsgFormat, outMsgFormat MsgFormat) *ServiceCaller {
+func NewServiceCaller(connFact *rpc.GrpcConnFactory, inMsgFormat, outMsgFormat MsgFormat, fdescCache *FileDescCache) *ServiceCaller {
 	return &ServiceCaller{
 		connFact:     connFact,
 		inMsgFormat:  inMsgFormat,
 		outMsgFormat: outMsgFormat,
+		fdescCache:   fdescCache,
 	}
 }
 
@@ -214,7 +216,7 @@ func (sc *ServiceCaller) marshalMessage(msg *dynamic.Message) ([]byte, error) {
 		EmitDefaults: true,
 		Indent:       "  ",
 		OrigName:     true,
-		AnyResolver:  &anyResolver{},
+		AnyResolver:  &anyResolver{sc.fdescCache},
 	})
 }
 

@@ -24,7 +24,7 @@ func TestMarshalJSON(t *testing.T) {
 	m.SetFieldByName("id", int32(1))
 	m.SetFieldByName("name", "test")
 
-	sc := NewServiceCaller(nil, JSON, JSON)
+	sc := NewServiceCaller(nil, JSON, JSON, nil)
 	b, err := sc.marshalMessage(m)
 	require.NoError(t, err)
 
@@ -59,7 +59,7 @@ func TestMarshalJSON_AnyNotFound(t *testing.T) {
 	m.SetFieldByName("name", "test")
 	m.SetFieldByName("a", aValue)
 
-	sc := NewServiceCaller(nil, JSON, JSON)
+	sc := NewServiceCaller(nil, JSON, JSON, nil)
 	b, err := sc.marshalMessage(m)
 	require.NoError(t, err)
 
