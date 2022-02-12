@@ -1,6 +1,7 @@
 package caller
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"testing"
@@ -8,6 +9,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/wrappers"
+	"github.com/jhump/protoreflect/desc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,4 +50,22 @@ func TestAnyResolver_WellKnown(t *testing.T) {
 
 	_, ok := m.(*wrappers.StringValue)
 	require.True(t, ok, "wrong type, expected: %s", typeURL)
+}
+
+func TestAnyResolver_LoadedFiles(t *testing.T) {
+	sml := NewServiceMetadataProto([]string{"../../testdata/test.proto"}, nil)
+	meta, err := sml.GetServiceMetaDataList(context.Background())
+	require.NoError(t, err)
+
+	r := &anyResolver{NewFileDescCache(meta)}
+
+	userType := "grpc_client_cli.testing.User"
+
+	typeURL := "type.googleapis.com/" + userType
+	m, err := r.Resolve(typeURL)
+	require.NoError(t, err)
+
+	md, err := desc.LoadMessageDescriptorForMessage(m)
+	require.NoError(t, err)
+	require.Equal(t, userType, md.GetFullyQualifiedName())
 }
