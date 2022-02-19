@@ -135,6 +135,12 @@ func main() {
 			Value:   0,
 			Usage:   "If greater than 0, sets the max receive message size to bytes, else uses grpc defaults (currently 4 MB)",
 		},
+		&cli.StringFlag{
+			Name:     "address",
+			Aliases:  []string{"a", "addr"},
+			Required: false,
+			Usage:    "host:port of the service",
+		},
 	}
 
 	app.Action = baseCmd
@@ -173,9 +179,11 @@ func baseCmd(c *cli.Context) (e error) {
 }
 
 func runApp(c *cli.Context, opts *startOpts) (e error) {
-	target := ""
-	if c.NArg() > 0 {
-		target = c.Args().First()
+	target := c.String("address")
+	if target == "" {
+		if c.NArg() > 0 {
+			target = c.Args().First()
+		}
 	}
 
 	if target == "" {

@@ -8,7 +8,8 @@
 
 Download the binary and install it to `/usr/local` directory:
 
-- `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.11.0/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local/bin -xz`
+- Linux: `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.11.0/grpc-client-cli_linux_x86_64.tar.gz | tar -C /usr/local/bin -xz` (you might need to add `sudo` before tar)
+- macOS: `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.11.0/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local/bin -xz`
 
 For go `1.16+` use this command to install the app to `$GOPATH/bin` directory:
 
@@ -21,9 +22,9 @@ Or use "go get" approach:
 
 ## Usage
 
-Just specify a connection string to a servce in `host:port` format and follow instructions to select service, method and enter request message in `json` or `proto` text format.
+Just specify a connection string to a service in `host:port` format and follow instructions to select service, method and enter request message in `json` or `proto` text format.
 
-`grpc-client-cli localhost:4400`
+`grpc-client-cli localhost:4400` or `grpc-client-cli --address localhost:4400`
 
 In this case the service needs to expose gRPC Reflection service.
 
@@ -96,6 +97,10 @@ grpc-client-cli -s User discover localhost:5050
 
 ```
 grpc-client-cli health localhost:5050
+```
+
+```
+grpc-client-cli --address localhost:5050 health
 ```
 
 ### Non-interactive mode

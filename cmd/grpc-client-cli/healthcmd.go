@@ -19,9 +19,11 @@ func healthCmd(c *cli.Context) error {
 }
 
 func checkHealth(c *cli.Context, out io.Writer) error {
-	target := ""
-	if c.NArg() > 0 {
-		target = c.Args().First()
+	target := c.String("address")
+	if target == "" {
+		if c.NArg() > 0 {
+			target = c.Args().First()
+		}
 	}
 
 	if target == "" {
