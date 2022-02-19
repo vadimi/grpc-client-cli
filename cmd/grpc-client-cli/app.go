@@ -137,19 +137,22 @@ func (a *app) Start(message []byte) error {
 			return a.printService(service)
 		}
 
-		method, err := a.selectMethod(a.getService(service), a.opts.Method)
-		if err != nil {
-			if err == errNoMethod {
-				continue
+		for {
+			method, err := a.selectMethod(a.getService(service), a.opts.Method)
+			if err != nil {
+				// if [..] is selected then go back to service selection
+				if err == errNoMethod {
+					break
+				}
+				return err
 			}
-			return err
-		}
 
-		err = a.callService(method, message)
-		// Ctrl+D will trigger io.EOF if the line is empty
-		// restart the app from the beginning
-		if err != io.EOF {
-			return err
+			err = a.callService(method, message)
+			// Ctrl+D will trigger io.EOF if the line is empty
+			// go back to method selection
+			if err != io.EOF {
+				return err
+			}
 		}
 	}
 }
