@@ -56,13 +56,6 @@ func NewConnectionOpts(target string) (*ConnectionOptions, error) {
 }
 
 func parseMetadata(val string) (string, string) {
-	i := strings.Index(val, ":")
-	key := ""
-	value := ""
-	if i > 0 {
-		key = val[0:i]
-	}
-
-	value = val[i+1:]
+	key, value, _ := strings.Cut(val, ":")
 	return key, value
 }

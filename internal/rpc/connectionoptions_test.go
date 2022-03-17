@@ -1,43 +1,38 @@
 package rpc
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
 func TestConnectionOptionsParseHost(t *testing.T) {
-	host := "test1.app"
+	const host = "test1.app"
 	tests := []string{host, "host=" + host}
 
 	for _, test := range tests {
 		opts, _ := NewConnectionOpts(test)
 
-		if opts.Host != host {
-			t.Errorf("Expected %s, got %s", host, opts.Host)
-		}
+		require.Equal(t, host, opts.Host)
 	}
 }
 
 func TestConnectionOptionsParseProxy(t *testing.T) {
-	proxy := "testproxy.app"
+	const proxy = "testproxy.app"
 	tests := []string{"host=test1.app,authority=" + proxy, "test1.app,authority=" + proxy}
 
 	for _, test := range tests {
 		opts, _ := NewConnectionOpts(test)
 
-		if opts.Authority != proxy {
-			t.Errorf("Expected %s, got %s", proxy, opts.Authority)
-		}
-
-		if opts.Host != "test1.app" {
-			t.Errorf("Expected %s, got %s", "test1.app", opts.Host)
-		}
+		require.Equal(t, proxy, opts.Authority)
+		require.Equal(t, "test1.app", opts.Host)
 	}
 }
 
 func TestConnectionOptionsParseError(t *testing.T) {
 	_, err := NewConnectionOpts("")
-
-	if err == nil {
-		t.Error("Expected non nil error")
-	}
+	assert.Error(t, err, "Expected non nil error")
 }
 
 func TestConnectionOptionsParseMetadata(t *testing.T) {
@@ -53,12 +48,9 @@ func TestConnectionOptionsParseMetadata(t *testing.T) {
 	}
 
 	for _, test := range tests {
-
 		opts, _ := NewConnectionOpts(test.input)
 
 		val := opts.Metadata["key1"][0]
-		if val != test.expected {
-			t.Errorf("Metadata parse expected %s, got %s", test.expected, val)
-		}
+		assert.Equal(t, test.expected, val)
 	}
 }
