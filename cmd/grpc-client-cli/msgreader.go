@@ -66,24 +66,7 @@ func (r *msgReader) Close() (err error) {
 }
 
 func (r *msgReader) ReadLine(names []string, opts ...ReadLineOpt) ([]byte, error) {
-	r.line.SetWordCompleter(func(line string, pos int) (head string, completions []string, tail string) {
-		h := ""
-		word := line[0:pos]
-		qi := strings.LastIndex(word, `"`)
-		if qi >= 0 {
-			h = line[0 : qi+1]
-			word = line[qi+1 : pos]
-		}
-		for _, n := range names {
-			if strings.HasPrefix(n, strings.ToLower(word)) {
-				head = h
-				completions = append(completions, n)
-				tail = line[pos:]
-				return
-			}
-		}
-		return
-	})
+	r.line.SetWordCompleter(r.wordCompleter(names))
 
 	rlOpts := &readLineOptions{}
 	for _, o := range opts {
@@ -167,4 +150,25 @@ func (r *msgReader) readHistorySize(reader io.Reader, bufferSize int) (num int, 
 		r.line.AppendHistory(string(line))
 	}
 	return num, nil
+}
+
+func (r *msgReader) wordCompleter(names []string) liner.WordCompleter {
+	return func(line string, pos int) (head string, completions []string, tail string) {
+		h := ""
+		word := line[0:pos]
+		qi := strings.LastIndex(word, `"`)
+		if qi >= 0 {
+			h = line[0 : qi+1]
+			word = line[qi+1 : pos]
+		}
+		for _, n := range names {
+			if strings.HasPrefix(strings.ToLower(n), strings.ToLower(word)) {
+				head = h
+				completions = append(completions, n)
+				tail = line[pos:]
+				return
+			}
+		}
+		return
+	}
 }
