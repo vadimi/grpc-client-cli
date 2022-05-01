@@ -9,9 +9,9 @@ require (
 	github.com/peterh/liner v1.2.2
 	github.com/spyzhov/ajson v0.7.1
 	github.com/stretchr/testify v1.7.1
-	github.com/urfave/cli/v2 v2.4.3
+	github.com/urfave/cli/v2 v2.5.1
 	golang.org/x/text v0.3.7
-	google.golang.org/grpc v1.45.0
+	google.golang.org/grpc v1.46.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.2.0
 	google.golang.org/protobuf v1.28.0
 )
