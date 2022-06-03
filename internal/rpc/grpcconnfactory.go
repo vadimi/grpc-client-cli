@@ -7,10 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mwitkow/go-http-dialer"
 
 	"github.com/vadimi/grpc-client-cli/internal/resolver/eureka"
 	"google.golang.org/grpc"
@@ -46,6 +50,7 @@ type GrpcConnFactorySettings struct {
 	certKey        string
 	authority      string
 	headers        map[string][]string
+	httpProxy      *url.URL
 	keepalive      bool
 	keepaliveTime  time.Duration
 	maxRecvMsgSize int
@@ -98,6 +103,12 @@ func WithMaxRecvMsgSize(messageSize int) ConnFactoryOption {
 	}
 }
 
+func WithHTTPProxy(proxyURL *url.URL) ConnFactoryOption {
+	return func(s *GrpcConnFactorySettings) {
+		s.httpProxy = proxyURL
+	}
+}
+
 func NewGrpcConnFactory(opts ...ConnFactoryOption) *GrpcConnFactory {
 	settings := &GrpcConnFactorySettings{}
 
@@ -136,6 +147,14 @@ func (f *GrpcConnFactory) getConn(target string, dial dialFunc, opts ...grpc.Dia
 		f.conns.cache[connOpts.Host] = conn
 	}
 	f.conns.Unlock()
+
+	if f.settings.httpProxy != nil {
+		tunnel := http_dialer.New(f.settings.httpProxy)
+		opts = append(opts,
+			grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+				return tunnel.Dial("tcp", s)
+			}))
+	}
 
 	conn.Do(func() {
 		opts := append(opts,

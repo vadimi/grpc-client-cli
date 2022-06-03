@@ -6,6 +6,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/gookit/color v1.5.0
 	github.com/jhump/protoreflect v1.12.0
+	github.com/mwitkow/go-http-dialer v0.0.0-20161116154839-378f744fb2b8
 	github.com/peterh/liner v1.2.2
 	github.com/spyzhov/ajson v0.7.1
 	github.com/stretchr/testify v1.7.1

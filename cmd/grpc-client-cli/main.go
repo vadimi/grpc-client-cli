@@ -101,6 +101,11 @@ func main() {
 			Value: "",
 			Usage: "override :authority header",
 		},
+		&cli.StringFlag{
+			Name:        "http_proxy",
+			DefaultText: "don't use tunneling proxy",
+			Usage:       "http tunneling proxy to use",
+		},
 		&cli.GenericFlag{
 			Name:    "informat",
 			Aliases: []string{"if"},
@@ -202,6 +207,7 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.Verbose = c.Bool("verbose")
 	opts.Target = target
 	opts.Authority = c.String("authority")
+	opts.HttpProxy = c.String("http_proxy")
 	opts.TLS = c.Bool("tls")
 	opts.Insecure = c.Bool("insecure")
 	opts.CACert = c.String("cacert")

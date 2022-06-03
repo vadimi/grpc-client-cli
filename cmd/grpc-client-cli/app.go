@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -41,6 +42,7 @@ type startOpts struct {
 	Target        string
 	IsInteractive bool
 	Authority     string
+	HttpProxy     string
 	InFormat      caller.MsgFormat
 	OutFormat     caller.MsgFormat
 
@@ -79,6 +81,14 @@ func newApp(opts *startOpts) (*app, error) {
 
 	if len(opts.Headers) > 0 {
 		connOpts = append(connOpts, rpc.WithHeaders(opts.Headers))
+	}
+
+	if opts.HttpProxy != "" {
+		proxyURL, err := url.Parse(opts.HttpProxy)
+		if err != nil {
+			return nil, errors.New("error parsing proxy URL")
+		}
+		connOpts = append(connOpts, rpc.WithHTTPProxy(proxyURL))
 	}
 
 	a := &app{
