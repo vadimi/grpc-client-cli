@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"net/url"
 	"testing"
 	"time"
 
@@ -37,4 +38,12 @@ func TestWithKeepalive(t *testing.T) {
 
 	assert.Equal(t, keepalive, grpcConnFact.settings.keepalive)
 	assert.Equal(t, keepaliveTime, grpcConnFact.settings.keepaliveTime)
+}
+
+func TestWithHTTPProxy(t *testing.T) {
+	proxyURL, _ := url.Parse("http://localhost:8080")
+	grpcConnFact := NewGrpcConnFactory(WithHTTPProxy(proxyURL))
+
+	assert.Equal(t, "localhost:8080", grpcConnFact.settings.httpProxy.Host)
+	assert.Equal(t, "", grpcConnFact.settings.httpProxy.Path)
 }
