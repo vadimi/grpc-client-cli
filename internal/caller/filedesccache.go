@@ -8,7 +8,7 @@ type FileDescCache struct {
 	files []*desc.FileDescriptor
 }
 
-func NewFileDescCache(meta []*ServiceMeta) *FileDescCache {
+func NewFileDescCache(meta []*ServiceMeta, additionalFiles ...*desc.FileDescriptor) *FileDescCache {
 	c := &FileDescCache{
 		keys:  map[string]struct{}{},
 		files: []*desc.FileDescriptor{},
@@ -16,6 +16,10 @@ func NewFileDescCache(meta []*ServiceMeta) *FileDescCache {
 
 	for _, m := range meta {
 		c.Add(m.File)
+	}
+
+	for _, f := range additionalFiles {
+		c.Add(f)
 	}
 
 	return c

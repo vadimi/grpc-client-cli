@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	appVersion = "1.12.0"
+	appVersion = "1.13.0-pre1"
 )
 
 func main() {
@@ -86,7 +86,7 @@ func main() {
 		&cli.StringSliceFlag{
 			Name:     "protoimports",
 			Required: false,
-			Usage:    "additional directories to search for dependencies, should be used with --proto option",
+			Usage:    "additional directories to search for dependencies or supply addtional files for Any type (un)marshal",
 		},
 		&cli.GenericFlag{
 			Name:        "header",
