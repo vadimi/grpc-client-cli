@@ -8,7 +8,7 @@ import (
 )
 
 type ServiceMetaData interface {
-	GetServiceMetaDataList(context.Context) ([]*ServiceMeta, error)
+	GetServiceMetaDataList(context.Context) (ServiceMetaList, error)
 	GetAdditionalFiles() ([]*desc.FileDescriptor, error)
 }
 
@@ -16,6 +16,17 @@ type ServiceMeta struct {
 	Name    string
 	Methods []*desc.MethodDescriptor
 	File    *desc.FileDescriptor
+}
+
+type ServiceMetaList []*ServiceMeta
+
+func (l ServiceMetaList) Files() []*desc.FileDescriptor {
+	res := make([]*desc.FileDescriptor, len(l))
+	for i, m := range l {
+		res[i] = m.File
+	}
+
+	return res
 }
 
 type serviceMetaBase struct{}

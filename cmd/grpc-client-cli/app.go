@@ -114,7 +114,7 @@ func newApp(opts *startOpts) (*app, error) {
 		return nil, err
 	}
 
-	a.fdescCache = caller.NewFileDescCache(services, additionalFiles...)
+	a.fdescCache = caller.NewFileDescCache(append(services.Files(), additionalFiles...))
 
 	a.servicesList = services
 

@@ -30,7 +30,7 @@ func NewServiceMetaData(connFact *rpc.GrpcConnFactory, target string, deadline i
 	}
 }
 
-func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) ([]*ServiceMeta, error) {
+func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) (ServiceMetaList, error) {
 	conn, err := s.connFact.GetConn(s.target)
 	if err != nil {
 		return nil, err

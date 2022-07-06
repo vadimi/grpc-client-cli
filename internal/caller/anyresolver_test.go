@@ -57,7 +57,7 @@ func TestAnyResolver_LoadedFiles(t *testing.T) {
 	meta, err := sml.GetServiceMetaDataList(context.Background())
 	require.NoError(t, err)
 
-	r := &anyResolver{NewFileDescCache(meta)}
+	r := &anyResolver{NewFileDescCache(meta.Files())}
 
 	userType := "grpc_client_cli.testing.User"
 

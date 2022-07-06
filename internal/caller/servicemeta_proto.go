@@ -25,7 +25,7 @@ func NewServiceMetadataProto(protoPath, protoImports []string) ServiceMetaData {
 	}
 }
 
-func (smp *serviceMetadataProto) GetServiceMetaDataList(ctx context.Context) ([]*ServiceMeta, error) {
+func (smp *serviceMetadataProto) GetServiceMetaDataList(ctx context.Context) (ServiceMetaList, error) {
 	fileDesc, err := parseProtoFiles(smp.protoPath, smp.protoImports)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing proto files: %w", err)
