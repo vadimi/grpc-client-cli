@@ -3,6 +3,7 @@ syntax = "proto3";
 package grpc_client_cli.testing;
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/any.proto";
 
 option go_package = "/;grpc_testing";
 
@@ -29,6 +30,16 @@ message SimpleRequest {
 // Unary response, as configured by the request.
 message SimpleResponse {
   User user = 1;
+}
+
+message SimpleAnyRequest {
+  int32 user_id = 1;
+  google.protobuf.Any user_props = 2;
+}
+
+message SimpleAnyResponse {
+  int32 user_id = 1;
+  google.protobuf.Any user_props = 2;
 }
 
 // Client-streaming request.
@@ -104,4 +115,6 @@ service TestService {
   // first request.
   rpc HalfDuplexCall(stream StreamingOutputCallRequest)
       returns (stream StreamingOutputCallResponse);
+
+  rpc UnaryAny(SimpleAnyRequest) returns(SimpleAnyResponse);
 }

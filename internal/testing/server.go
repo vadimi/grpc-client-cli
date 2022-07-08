@@ -71,7 +71,6 @@ func (testService) UnaryCall(ctx context.Context, req *grpc_testing.SimpleReques
 
 	if req.ResponseStatus != nil && req.ResponseStatus.Code != int32(codes.OK) {
 		return nil, status.Error(codes.Code(req.ResponseStatus.Code), "error")
-
 	}
 
 	return &grpc_testing.SimpleResponse{
@@ -85,7 +84,6 @@ func (testService) UnaryCall(ctx context.Context, req *grpc_testing.SimpleReques
 func (testService) StreamingOutputCall(req *grpc_testing.StreamingOutputCallRequest, str grpc_testing.TestService_StreamingOutputCallServer) error {
 	if req.ResponseStatus != nil && req.ResponseStatus.Code != int32(codes.OK) {
 		return status.Error(codes.Code(req.ResponseStatus.Code), "error")
-
 	}
 
 	rsp := &grpc_testing.StreamingOutputCallResponse{User: &grpc_testing.User{}}
@@ -150,7 +148,6 @@ func (testService) FullDuplexCall(str grpc_testing.TestService_FullDuplexCallSer
 
 		if req.ResponseStatus != nil && req.ResponseStatus.Code != int32(codes.OK) {
 			return status.Error(codes.Code(req.ResponseStatus.Code), "error")
-
 		}
 
 		resp := &grpc_testing.StreamingOutputCallResponse{User: &grpc_testing.User{}}
@@ -209,6 +206,20 @@ func (testService) HalfDuplexCall(str grpc_testing.TestService_HalfDuplexCallSer
 	}
 
 	return nil
+}
+
+func (testService) UnaryAny(ctx context.Context, req *grpc_testing.SimpleAnyRequest) (*grpc_testing.SimpleAnyResponse, error) {
+	if req.GetUserProps() == nil {
+		return nil, status.Error(codes.InvalidArgument, "user_props is required")
+	}
+
+	// just echo all properties back
+	res := &grpc_testing.SimpleAnyResponse{
+		UserId:    req.GetUserId(),
+		UserProps: req.GetUserProps(),
+	}
+
+	return res, nil
 }
 
 func SetupTestServer() error {
@@ -292,7 +303,6 @@ func stopTestServer(s *grpc.Server) {
 	})
 	defer timer.Stop()
 	s.GracefulStop()
-
 }
 
 func TestServerAddr() string {
@@ -365,7 +375,6 @@ func getCreds(mTLS bool) (grpc.ServerOption, error) {
 		"../../testdata/certs/test_server.crt",
 		"../../testdata/certs/test_server.key",
 	)
-
 	if err != nil {
 		return nil, err
 	}

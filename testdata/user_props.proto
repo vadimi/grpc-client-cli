@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package grpc_client_cli.testing;
+
+option go_package = "/;grpc_testing";
+
+message UserProps {
+  string name = 1;
+}
