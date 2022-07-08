@@ -225,5 +225,7 @@ func (sc *ServiceCaller) unmarshalMessage(msg *dynamic.Message, b []byte) error 
 		return msg.UnmarshalText(b)
 	}
 
-	return msg.UnmarshalJSON(b)
+	return msg.UnmarshalJSONPB(&jsonpb.Unmarshaler{
+		AnyResolver: &anyResolver{sc.fdescCache},
+	}, b)
 }

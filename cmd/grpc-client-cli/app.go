@@ -97,7 +97,7 @@ func newApp(opts *startOpts) (*app, error) {
 	if len(opts.Protos) > 0 {
 		svc = caller.NewServiceMetadataProto(opts.Protos, opts.ProtoImports)
 	} else {
-		svc = caller.NewServiceMetaData(a.connFact, a.opts.Target, a.opts.Deadline)
+		svc = caller.NewServiceMetaData(a.connFact, a.opts.Target, a.opts.Deadline, opts.ProtoImports)
 	}
 
 	ctx := rpc.WithStatsCtx(context.Background())
@@ -109,7 +109,12 @@ func newApp(opts *startOpts) (*app, error) {
 		return nil, err
 	}
 
-	a.fdescCache = caller.NewFileDescCache(services)
+	additionalFiles, err := svc.GetAdditionalFiles()
+	if err != nil {
+		return nil, err
+	}
+
+	a.fdescCache = caller.NewFileDescCache(append(services.Files(), additionalFiles...))
 
 	a.servicesList = services
 

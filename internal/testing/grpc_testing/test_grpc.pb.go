@@ -43,6 +43,7 @@ type TestServiceClient interface {
 	// stream of responses are returned to the client when the server starts with
 	// first request.
 	HalfDuplexCall(ctx context.Context, opts ...grpc.CallOption) (TestService_HalfDuplexCallClient, error)
+	UnaryAny(ctx context.Context, in *SimpleAnyRequest, opts ...grpc.CallOption) (*SimpleAnyResponse, error)
 }
 
 type testServiceClient struct {
@@ -199,6 +200,15 @@ func (x *testServiceHalfDuplexCallClient) Recv() (*StreamingOutputCallResponse, 
 	return m, nil
 }
 
+func (c *testServiceClient) UnaryAny(ctx context.Context, in *SimpleAnyRequest, opts ...grpc.CallOption) (*SimpleAnyResponse, error) {
+	out := new(SimpleAnyResponse)
+	err := c.cc.Invoke(ctx, "/grpc_client_cli.testing.TestService/UnaryAny", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestServiceServer is the server API for TestService service.
 // All implementations should embed UnimplementedTestServiceServer
 // for forward compatibility
@@ -223,6 +233,7 @@ type TestServiceServer interface {
 	// stream of responses are returned to the client when the server starts with
 	// first request.
 	HalfDuplexCall(TestService_HalfDuplexCallServer) error
+	UnaryAny(context.Context, *SimpleAnyRequest) (*SimpleAnyResponse, error)
 }
 
 // UnimplementedTestServiceServer should be embedded to have forward compatible implementations.
@@ -246,6 +257,9 @@ func (UnimplementedTestServiceServer) FullDuplexCall(TestService_FullDuplexCallS
 }
 func (UnimplementedTestServiceServer) HalfDuplexCall(TestService_HalfDuplexCallServer) error {
 	return status.Errorf(codes.Unimplemented, "method HalfDuplexCall not implemented")
+}
+func (UnimplementedTestServiceServer) UnaryAny(context.Context, *SimpleAnyRequest) (*SimpleAnyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnaryAny not implemented")
 }
 
 // UnsafeTestServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -394,6 +408,24 @@ func (x *testServiceHalfDuplexCallServer) Recv() (*StreamingOutputCallRequest, e
 	return m, nil
 }
 
+func _TestService_UnaryAny_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SimpleAnyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestServiceServer).UnaryAny(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/grpc_client_cli.testing.TestService/UnaryAny",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestServiceServer).UnaryAny(ctx, req.(*SimpleAnyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestService_ServiceDesc is the grpc.ServiceDesc for TestService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -408,6 +440,10 @@ var TestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UnaryCall",
 			Handler:    _TestService_UnaryCall_Handler,
+		},
+		{
+			MethodName: "UnaryAny",
+			Handler:    _TestService_UnaryAny_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
