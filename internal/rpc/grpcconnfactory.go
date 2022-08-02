@@ -70,6 +70,7 @@ func WithConnCred(insecure bool, caCert string, cert string, certKey string) Con
 		s.cert = cert
 		s.certKey = certKey
 		s.maxRecvMsgSize = 0
+		s.insecure = insecure
 	}
 }
 

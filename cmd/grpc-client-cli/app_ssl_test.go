@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
 )
 
@@ -31,7 +32,6 @@ func TestAppServiceTLSCalls(t *testing.T) {
 		CACert:        "../../testdata/certs/test_ca.crt",
 		w:             buf,
 	})
-
 	if err != nil {
 		t.Error(err)
 		return
@@ -54,7 +54,6 @@ func TestAppServiceMTLSCalls(t *testing.T) {
 		CertKey:       "../../testdata/certs/test_client.key",
 		w:             buf,
 	})
-
 	if err != nil {
 		t.Error(err)
 		return
@@ -100,6 +99,18 @@ func TestAppServiceMTLSInvalidCerts(t *testing.T) {
 				t.Errorf("certificate signature validation error is expected")
 			}
 		})
-
 	}
+}
+
+func TestAppServiceTLSInvalidCertsInsecure(t *testing.T) {
+	_, err := newApp(&startOpts{
+		Target:        app_testing.TestServerTLSAddr(),
+		Deadline:      15,
+		IsInteractive: false,
+		Insecure:      true,
+		TLS:           true,
+		CACert:        "../../testdata/certs/other_ca.crt",
+	})
+
+	assert.NoError(t, err)
 }
