@@ -3,13 +3,13 @@ package caller
 import (
 	"fmt"
 	"io"
-	"os"
+	"io/fs"
 	"path"
 	"path/filepath"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
-	"github.com/vadimi/grpc-client-cli/internal/fs"
+	clifs "github.com/vadimi/grpc-client-cli/internal/fs"
 )
 
 func parseProtoFiles(protoDirs []string, protoImports []string) ([]*desc.FileDescriptor, error) {
@@ -37,7 +37,7 @@ func parseProtoFiles(protoDirs []string, protoImports []string) ([]*desc.FileDes
 	p := protoparse.Parser{
 		ImportPaths: importPaths,
 		Accessor: func(filename string) (io.ReadCloser, error) {
-			return fs.NewFileReader(filename)
+			return clifs.NewFileReader(filename)
 		},
 	}
 
@@ -63,15 +63,17 @@ func findProtoFiles(paths []string) ([]string, error) {
 			continue
 		}
 
-		files, err := os.ReadDir(p)
+		err := filepath.Walk(p, func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if filepath.Ext(info.Name()) == ".proto" {
+				protofiles = append(protofiles, path)
+			}
+			return nil
+		})
 		if err != nil {
 			return nil, err
-		}
-
-		for _, f := range files {
-			if filepath.Ext(f.Name()) == ".proto" {
-				protofiles = append(protofiles, f.Name())
-			}
 		}
 	}
 
