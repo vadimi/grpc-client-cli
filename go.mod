@@ -4,12 +4,12 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/ArthurHlt/go-eureka-client v1.1.0
 	github.com/golang/protobuf v1.5.2
-	github.com/gookit/color v1.5.1
+	github.com/gookit/color v1.5.2
 	github.com/jhump/protoreflect v1.12.0
 	github.com/peterh/liner v1.2.2
 	github.com/spyzhov/ajson v0.7.1
 	github.com/stretchr/testify v1.8.0
-	github.com/urfave/cli/v2 v2.11.2
+	github.com/urfave/cli/v2 v2.15.0
 	golang.org/x/text v0.3.7
 	google.golang.org/grpc v1.49.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.2.0
