@@ -8,12 +8,12 @@
 
 Download the binary and install it to `/usr/local` directory:
 
-- Linux: `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.13.1/grpc-client-cli_linux_x86_64.tar.gz | tar -C /usr/local/bin -xz` (you might need to add `sudo` before tar)
-- macOS: `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.13.1/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local/bin -xz`
+- Linux: `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.14.0/grpc-client-cli_linux_x86_64.tar.gz | tar -C /usr/local/bin -xz` (you might need to add `sudo` before tar)
+- macOS: `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.14.0/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local/bin -xz`
 
 For go `1.17+` use this command to install the app to `$GOPATH/bin` directory:
 
-- `go install github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.13.1`
+- `go install github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.14.0`
 - `go install github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@latest`
 
 ## Usage
