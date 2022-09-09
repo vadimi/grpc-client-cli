@@ -2,6 +2,7 @@ package caller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jhump/protoreflect/desc"
@@ -37,6 +38,9 @@ func (s serviceMetaBase) GetAdditionalFiles(protoImports []string) ([]*desc.File
 	}
 	fileDesc, err := parseProtoFiles(protoImports, nil)
 	if err != nil {
+		if errors.Is(err, errNoProtoFilesFound) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("error parsing additional proto files: %w", err)
 	}
 	return fileDesc, nil

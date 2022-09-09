@@ -1,6 +1,7 @@
 package caller
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -12,6 +13,8 @@ import (
 	clifs "github.com/vadimi/grpc-client-cli/internal/fs"
 )
 
+var errNoProtoFilesFound = errors.New("no proto files found")
+
 func parseProtoFiles(protoDirs []string, protoImports []string) ([]*desc.FileDescriptor, error) {
 	protofiles, err := findProtoFiles(protoDirs)
 	if err != nil {
@@ -19,7 +22,7 @@ func parseProtoFiles(protoDirs []string, protoImports []string) ([]*desc.FileDes
 	}
 
 	if len(protofiles) == 0 {
-		return nil, fmt.Errorf("no proto files found in %s", protoDirs)
+		return nil, fmt.Errorf("%w: %s", errNoProtoFilesFound, protoDirs)
 	}
 
 	importPaths := []string{}
