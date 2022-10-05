@@ -43,6 +43,7 @@ type startOpts struct {
 	Authority     string
 	InFormat      caller.MsgFormat
 	OutFormat     caller.MsgFormat
+	OutJsonNames  bool
 
 	// connection credentials
 	TLS      bool
@@ -245,7 +246,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 
 // callClientStream calls unary or client stream method
 func (a *app) callClientStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.fdescCache)
+	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.fdescCache, a.opts.OutJsonNames)
 
 	result, err := serviceCaller.CallClientStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 	if err != nil {
@@ -264,7 +265,7 @@ func (a *app) printResult(r []byte) {
 
 // callStream calls both server or bi-directional stream methods
 func (a *app) callStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.fdescCache)
+	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.fdescCache, a.opts.OutJsonNames)
 	result, errChan := serviceCaller.CallStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 
 	a.printer.BeginArray()

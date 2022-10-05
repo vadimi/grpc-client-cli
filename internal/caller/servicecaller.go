@@ -84,14 +84,16 @@ type ServiceCaller struct {
 	inMsgFormat  MsgFormat
 	outMsgFormat MsgFormat
 	fdescCache   *FileDescCache
+	outJsonNames bool
 }
 
-func NewServiceCaller(connFact *rpc.GrpcConnFactory, inMsgFormat, outMsgFormat MsgFormat, fdescCache *FileDescCache) *ServiceCaller {
+func NewServiceCaller(connFact *rpc.GrpcConnFactory, inMsgFormat, outMsgFormat MsgFormat, fdescCache *FileDescCache, outJsonNames bool) *ServiceCaller {
 	return &ServiceCaller{
 		connFact:     connFact,
 		inMsgFormat:  inMsgFormat,
 		outMsgFormat: outMsgFormat,
 		fdescCache:   fdescCache,
+		outJsonNames: outJsonNames,
 	}
 }
 
@@ -215,7 +217,7 @@ func (sc *ServiceCaller) marshalMessage(msg *dynamic.Message) ([]byte, error) {
 	return msg.MarshalJSONPB(&jsonpb.Marshaler{
 		EmitDefaults: true,
 		Indent:       "  ",
-		OrigName:     true,
+		OrigName:     !sc.outJsonNames,
 		AnyResolver:  &anyResolver{sc.fdescCache},
 	})
 }

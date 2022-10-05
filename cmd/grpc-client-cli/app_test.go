@@ -541,6 +541,7 @@ func appCallClientStream(t *testing.T, app *app, buf *bytes.Buffer) {
 	}
 
 	res := buf.Bytes()
+	fmt.Println(string(res))
 	root, err := ajson.Unmarshal(res)
 	if err != nil {
 		t.Errorf("error unmarshaling result json: %v", err)
