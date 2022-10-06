@@ -141,6 +141,11 @@ func main() {
 			Required: false,
 			Usage:    "host:port of the service",
 		},
+		&cli.BoolFlag{
+			Name:  "out-json-names",
+			Value: false,
+			Usage: "If true uses json_name properties/camel casing in message output",
+		},
 	}
 
 	app.Action = baseCmd
@@ -215,6 +220,7 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.KeepaliveTime = c.Duration("keepalive-time")
 	opts.Keepalive = c.Bool("keepalive")
 	opts.MaxRecvMsgSize = c.Int("max-receive-message-size")
+	opts.OutJsonNames = c.Bool("out-json-names")
 
 	input := c.String("input")
 
