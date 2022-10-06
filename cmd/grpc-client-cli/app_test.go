@@ -749,6 +749,46 @@ func checkStats(t *testing.T, app *app, msg []byte) {
 	assert.True(t, s.ReqSize() <= s.RespSize(), "ReqSize should be <= RespSize: %v", s)
 }
 
+func TestJSONNamesOutput(t *testing.T) {
+	appOpts := &startOpts{
+		Target:        app_testing.TestServerAddr(),
+		Deadline:      15,
+		IsInteractive: false,
+		OutJsonNames:  true,
+	}
+	buf := &bytes.Buffer{}
+	appOpts.w = buf
+	appOpts.ProtoImports = []string{"../../testdata/user_props.proto"}
+	app, err := newApp(appOpts)
+	require.NoError(t, err)
+
+	m, ok := findMethod(t, app, "grpc_client_cli.testing.TestService", "UnaryAny")
+	if !ok {
+		return
+	}
+	msgTmpl := `
+{
+  "user_id": 1,
+  "user_props": {
+    "@type": "type.googleapis.com/grpc_client_cli.testing.UserProps",
+    "name": "test"
+  }
+}
+`
+	msg := []byte(msgTmpl)
+
+	err = app.callClientStream(context.Background(), m, [][]byte{msg})
+	require.NoError(t, err, "error executing callClientStream()")
+
+	res := buf.Bytes()
+	root, err := ajson.Unmarshal(res)
+	require.NoError(t, err, "error unmarshaling result json")
+
+	require.Equal(t, int32(1), jsonInt32(root, "$.userId"), "userId not found")
+	require.Equal(t, "test", jsonString(root, "$.userProps.name"), "userProps.name not found")
+	require.Equal(t, "type.googleapis.com/grpc_client_cli.testing.UserProps", jsonString(root, "$.userProps.@type"), "userProps.@type not found")
+}
+
 func checkStatsInOutput(t *testing.T, app *app, msg []byte, buf *bytes.Buffer) {
 	m, ok := findMethod(t, app, "grpc_client_cli.testing.TestService", "UnaryCall")
 	if !ok {
