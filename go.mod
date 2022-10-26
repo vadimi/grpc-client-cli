@@ -7,10 +7,10 @@ require (
 	github.com/ArthurHlt/go-eureka-client v1.1.0
 	github.com/golang/protobuf v1.5.2
 	github.com/gookit/color v1.5.2
-	github.com/jhump/protoreflect v1.13.0
+	github.com/jhump/protoreflect v1.14.0
 	github.com/peterh/liner v1.2.2
 	github.com/spyzhov/ajson v0.7.1
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/urfave/cli/v2 v2.20.3
 	golang.org/x/text v0.4.0
 	google.golang.org/grpc v1.50.1

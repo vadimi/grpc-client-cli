@@ -7,7 +7,6 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
-	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
 type serviceMetaData struct {
@@ -35,10 +34,9 @@ func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) (ServiceMe
 	if err != nil {
 		return nil, err
 	}
-	rpbclient := rpb.NewServerReflectionClient(conn)
 	callctx, cancel := context.WithTimeout(ctx, time.Duration(s.deadline)*time.Second)
 	defer cancel()
-	rc := grpcreflect.NewClient(callctx, rpbclient)
+	rc := grpcreflect.NewClientAuto(callctx, conn)
 
 	services, err := rc.ListServices()
 	if err != nil {
@@ -57,7 +55,7 @@ func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) (ServiceMe
 		if err != nil {
 			rc.Reset()
 			// try only once here
-			rc = grpcreflect.NewClient(callctx, rpbclient)
+			rc = grpcreflect.NewClientAuto(callctx, conn)
 			svcDesc, err = rc.ResolveService(svc)
 			if err != nil {
 				defer rc.Reset()
