@@ -20,6 +20,8 @@ func main() {
 	app.Usage = "generic gRPC client"
 	app.Version = appVersion
 	app.EnableBashCompletion = true
+	app.CustomAppHelpTemplate = helpTemplate
+	app.ExtraInfo = getExtraInfo
 
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
