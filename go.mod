@@ -11,9 +11,9 @@ require (
 	github.com/peterh/liner v1.2.2
 	github.com/spyzhov/ajson v0.7.2
 	github.com/stretchr/testify v1.8.1
-	github.com/urfave/cli/v2 v2.24.2
-	golang.org/x/text v0.6.0
-	google.golang.org/grpc v1.52.3
+	github.com/urfave/cli/v2 v2.24.3
+	golang.org/x/text v0.7.0
+	google.golang.org/grpc v1.53.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.2.0
 	google.golang.org/protobuf v1.28.1
 )
@@ -32,9 +32,9 @@ require (
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/net v0.4.0 // indirect
-	golang.org/x/sys v0.3.0 // indirect
-	golang.org/x/term v0.3.0 // indirect
-	google.golang.org/genproto v0.0.0-20221118155620-16455021b5e6 // indirect
+	golang.org/x/net v0.5.0 // indirect
+	golang.org/x/sys v0.4.0 // indirect
+	golang.org/x/term v0.4.0 // indirect
+	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
