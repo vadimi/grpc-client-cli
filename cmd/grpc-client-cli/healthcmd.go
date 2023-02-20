@@ -33,7 +33,17 @@ func checkHealth(c *cli.Context, out io.Writer) error {
 	}
 
 	service := c.String("service")
-	cf := rpc.NewGrpcConnFactory()
+	tls := c.Bool("tls")
+	var cf *rpc.GrpcConnFactory
+	if tls {
+		insecure := c.Bool("insecure")
+		cACert := c.String("cacert")
+		cert := c.String("cert")
+		certKey := c.String("certkey")
+		cf = rpc.NewGrpcConnFactory(rpc.WithConnCred(insecure, cACert, cert, certKey))
+	} else {
+		cf = rpc.NewGrpcConnFactory()
+	}
 	defer cf.Close()
 	conn, err := cf.GetConn(target)
 	if err != nil {
