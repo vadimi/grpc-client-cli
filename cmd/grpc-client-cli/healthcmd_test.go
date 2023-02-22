@@ -83,3 +83,23 @@ func TestHealthCheckError(t *testing.T) {
 		})
 	}
 }
+
+func TestHealthCheckTLS(t *testing.T) {
+	set := flag.NewFlagSet("test", 0)
+	set.String("deadline", "15", "")
+	set.String("service", "", "")
+	set.String("tls", "true", "")
+	set.String("cacert", "../../testdata/certs/test_ca.crt", "")
+	require.NoError(t, set.Parse([]string{app_testing.TestServerTLSAddr()}))
+	ctx := cli.NewContext(nil, set, nil)
+
+	buf := &bytes.Buffer{}
+
+	err := checkHealth(ctx, buf)
+	require.NoError(t, err, "no error expected while checking health")
+
+	res := buf.Bytes()
+	root, err := ajson.Unmarshal(res)
+	require.NoError(t, err, "error unmarshaling result json")
+	require.Equal(t, "SERVING", jsonString(root, "$.status"), "invalid heath check status")
+}
