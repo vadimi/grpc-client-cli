@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	appVersion = "1.16.0"
+	appVersion = "1.17.0"
 )
 
 func main() {
