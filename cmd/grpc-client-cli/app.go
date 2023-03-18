@@ -33,17 +33,18 @@ type app struct {
 }
 
 type startOpts struct {
-	Service       string
-	Method        string
-	Discover      bool
-	Deadline      int
-	Verbose       bool
-	Target        string
-	IsInteractive bool
-	Authority     string
-	InFormat      caller.MsgFormat
-	OutFormat     caller.MsgFormat
-	OutJsonNames  bool
+	Service            string
+	Method             string
+	Discover           bool
+	Deadline           int
+	Verbose            bool
+	Target             string
+	IsInteractive      bool
+	Authority          string
+	InFormat           caller.MsgFormat
+	OutFormat          caller.MsgFormat
+	OutJsonNames       bool
+	GrpcReflectVersion caller.GrpcReflectVersion
 
 	// connection credentials
 	TLS      bool
@@ -98,7 +99,13 @@ func newApp(opts *startOpts) (*app, error) {
 	if len(opts.Protos) > 0 {
 		svc = caller.NewServiceMetadataProto(opts.Protos, opts.ProtoImports)
 	} else {
-		svc = caller.NewServiceMetaData(a.connFact, a.opts.Target, a.opts.Deadline, opts.ProtoImports)
+		svc = caller.NewServiceMetaData(&caller.ServiceMetaDataConfig{
+			ConnFact:       a.connFact,
+			Target:         a.opts.Target,
+			Deadline:       a.opts.Deadline,
+			ProtoImports:   a.opts.ProtoImports,
+			ReflectVersion: a.opts.GrpcReflectVersion,
+		})
 	}
 
 	ctx := rpc.WithStatsCtx(context.Background())
