@@ -148,6 +148,16 @@ func main() {
 			Value: false,
 			Usage: "If true uses json_name properties/camel casing in message output",
 		},
+		&cli.GenericFlag{
+			Name: "reflect-version",
+			Value: &cliext.EnumValue{
+				Enum:    []string{"v1alpha", "auto"},
+				Default: "v1alpha",
+			},
+			Usage: "Specify which grpc reflection version to use, v1alpha is the default as it's the most widely used version for now. " +
+				`"auto" option will try to determine the version automatically, it requires correctly functioning grpc server that returns Unimplemented error in case v1 or v1alpha are not supported. ` +
+				"After v1 release the default option will be changed.",
+		},
 	}
 
 	app.Action = baseCmd
@@ -223,6 +233,7 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.Keepalive = c.Bool("keepalive")
 	opts.MaxRecvMsgSize = c.Int("max-receive-message-size")
 	opts.OutJsonNames = c.Bool("out-json-names")
+	opts.GrpcReflectVersion = parseReflectVersion(c.Generic("reflect-version"))
 
 	input := c.String("input")
 
@@ -317,4 +328,12 @@ func parseMsgFormat(val interface{}) caller.MsgFormat {
 	}
 
 	return caller.JSON
+}
+
+func parseReflectVersion(val interface{}) caller.GrpcReflectVersion {
+	if enum, ok := val.(*cliext.EnumValue); ok {
+		return caller.ParseGrpcReflectVersion(enum.String())
+	}
+
+	return caller.GrpcReflectV1Alpha
 }

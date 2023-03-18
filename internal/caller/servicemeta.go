@@ -7,25 +7,37 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
+	"google.golang.org/grpc"
+	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
 type serviceMetaData struct {
-	connFact     *rpc.GrpcConnFactory
-	target       string
-	deadline     int
-	protoImports []string
+	connFact       *rpc.GrpcConnFactory
+	target         string
+	deadline       int
+	protoImports   []string
+	reflectVersion GrpcReflectVersion
 
 	serviceMetaBase
 }
 
+type ServiceMetaDataConfig struct {
+	ConnFact       *rpc.GrpcConnFactory
+	Target         string
+	ProtoImports   []string
+	Deadline       int
+	ReflectVersion GrpcReflectVersion
+}
+
 // NewServiceMetaData returns new instance of ServiceMetaData
 // that reads service metadata by calling grpc Reflection service of the target
-func NewServiceMetaData(connFact *rpc.GrpcConnFactory, target string, deadline int, protoImports []string) ServiceMetaData {
+func NewServiceMetaData(cfg *ServiceMetaDataConfig) ServiceMetaData {
 	return &serviceMetaData{
-		connFact:     connFact,
-		target:       target,
-		deadline:     deadline,
-		protoImports: protoImports,
+		connFact:       cfg.ConnFact,
+		target:         cfg.Target,
+		deadline:       cfg.Deadline,
+		protoImports:   cfg.ProtoImports,
+		reflectVersion: cfg.ReflectVersion,
 	}
 }
 
@@ -36,7 +48,7 @@ func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) (ServiceMe
 	}
 	callctx, cancel := context.WithTimeout(ctx, time.Duration(s.deadline)*time.Second)
 	defer cancel()
-	rc := grpcreflect.NewClientAuto(callctx, conn)
+	rc := s.grpcReflectClient(callctx, conn)
 
 	services, err := rc.ListServices()
 	if err != nil {
@@ -55,7 +67,7 @@ func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) (ServiceMe
 		if err != nil {
 			rc.Reset()
 			// try only once here
-			rc = grpcreflect.NewClientAuto(callctx, conn)
+			rc = s.grpcReflectClient(callctx, conn)
 			svcDesc, err = rc.ResolveService(svc)
 			if err != nil {
 				defer rc.Reset()
@@ -83,4 +95,12 @@ func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) (ServiceMe
 
 func (s *serviceMetaData) GetAdditionalFiles() ([]*desc.FileDescriptor, error) {
 	return s.serviceMetaBase.GetAdditionalFiles(s.protoImports)
+}
+
+func (s *serviceMetaData) grpcReflectClient(ctx context.Context, conn grpc.ClientConnInterface) *grpcreflect.Client {
+	if s.reflectVersion == GrpcReflectAuto {
+		return grpcreflect.NewClientAuto(ctx, conn)
+	}
+	rpbclient := rpb.NewServerReflectionClient(conn)
+	return grpcreflect.NewClientV1Alpha(ctx, rpbclient)
 }

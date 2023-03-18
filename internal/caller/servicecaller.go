@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
@@ -39,9 +40,28 @@ func ParseMsgFormat(s string) MsgFormat {
 	return JSON
 }
 
+type GrpcReflectVersion int
+
+func ParseGrpcReflectVersion(s string) GrpcReflectVersion {
+	switch strings.ToLower(s) {
+	case "v1alpha":
+		return GrpcReflectV1Alpha
+	case "auto":
+		return GrpcReflectAuto
+	default:
+		return GrpcReflectV1Alpha
+	}
+}
+
 const (
 	JSON MsgFormat = iota
 	Text
+)
+
+const (
+	GrpcReflectV1Alpha GrpcReflectVersion = iota
+	// automatically determine which grpc reflection version to use
+	GrpcReflectAuto
 )
 
 type temporary interface {
