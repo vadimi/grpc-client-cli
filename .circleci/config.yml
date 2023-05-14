@@ -13,6 +13,12 @@ jobs:
             mkdir -p $TEST_RESULTS
             gotestsum --junitfile ${TEST_RESULTS}/testresults.xml --format short-verbose --no-summary=skipped ./...
       - run:
+          name: check vulnerabilities
+          command: |
+            set -o pipefail
+            go install golang.org/x/vuln/cmd/govulncheck@latest
+            govulncheck ./...
+      - run:
           name: build
           command: |
             curl -sL https://git.io/goreleaser | bash -s -- --skip-publish --rm-dist --skip-validate
