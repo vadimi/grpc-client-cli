@@ -3,17 +3,17 @@ module github.com/vadimi/grpc-client-cli
 go 1.19
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.6
+	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/ArthurHlt/go-eureka-client v1.1.0
 	github.com/golang/protobuf v1.5.3
 	github.com/gookit/color v1.5.3
 	github.com/jhump/protoreflect v1.15.1
 	github.com/peterh/liner v1.2.2
 	github.com/spyzhov/ajson v0.8.0
-	github.com/stretchr/testify v1.8.2
-	github.com/urfave/cli/v2 v2.25.3
-	golang.org/x/text v0.9.0
-	google.golang.org/grpc v1.55.0
+	github.com/stretchr/testify v1.8.4
+	github.com/urfave/cli/v2 v2.25.7
+	golang.org/x/text v0.10.0
+	google.golang.org/grpc v1.56.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.3.0
 	google.golang.org/protobuf v1.30.0
 )
@@ -33,10 +33,10 @@ require (
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.6.0 // indirect
-	golang.org/x/term v0.6.0 // indirect
-	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
+	golang.org/x/net v0.9.0 // indirect
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
+	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/term v0.7.0 // indirect
+	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

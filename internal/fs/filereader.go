@@ -23,7 +23,7 @@ func NewFileReader(path string) (io.ReadCloser, error) {
 	return NewReader(f)
 }
 
-func NewReader(r io.ReadCloser) (io.ReadCloser, error){
+func NewReader(r io.ReadCloser) (io.ReadCloser, error) {
 	bom := unicode.BOMOverride(unicode.UTF8.NewDecoder())
 	unicodeReader := transform.NewReader(r, bom)
 	br := &noBomReader{
