@@ -15,11 +15,14 @@ builds:
 
 archives:
   - format: tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    name_template: >-
+      pkg/{{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
     files:
     - none* # binaries only
     format_overrides:
       - goos: windows
         format: zip
-    replacements:
-      amd64: x86_64
