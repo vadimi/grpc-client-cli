@@ -9,7 +9,7 @@ require (
 	github.com/gookit/color v1.5.4
 	github.com/jhump/protoreflect v1.15.1
 	github.com/peterh/liner v1.2.2
-	github.com/spyzhov/ajson v0.8.0
+	github.com/spyzhov/ajson v0.9.0
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.25.7
 	golang.org/x/text v0.11.0
