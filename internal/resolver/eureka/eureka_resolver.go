@@ -19,7 +19,7 @@ type eurekaBuilder struct{}
 
 // Build creates and starts a DNS resolver that watches the name resolution of the target.
 func (b *eurekaBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
-	eurekaServer := target.Authority
+	eurekaServer := target.URL.Host
 	serviceName := target.Endpoint()
 	eurekaPath := ""
 
