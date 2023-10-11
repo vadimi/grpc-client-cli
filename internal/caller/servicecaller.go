@@ -7,15 +7,16 @@ import (
 	"io"
 	"strings"
 
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/encoding/prototext"
+	"google.golang.org/protobuf/types/dynamicpb"
 
 	"github.com/jhump/protoreflect/desc"
-	"github.com/jhump/protoreflect/dynamic"
 )
 
 // Proto message format
@@ -143,8 +144,9 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 
 	go func() {
 		for {
+			m := dynamicpb.NewMessage(methodDesc.GetOutputType().UnwrapMessage())
 
-			m := dynamic.NewMessage(methodDesc.GetOutputType())
+			// m := dynamic.NewMessage(methodDesc.GetOutputType())
 			err := stream.RecvMsg(m)
 			if err != nil {
 				if err != io.EOF {
@@ -168,7 +170,8 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 	}()
 
 	for _, reqMsg := range messages {
-		msg := dynamic.NewMessage(methodDesc.GetInputType())
+		// msg := dynamic.NewMessage(methodDesc.GetInputType())
+		msg := dynamicpb.NewMessage(methodDesc.GetInputType().UnwrapMessage())
 
 		err := sc.unmarshalMessage(msg, reqMsg)
 		if err != nil {
@@ -229,25 +232,39 @@ func (sc *ServiceCaller) getConn(target string) (*grpc.ClientConn, error) {
 	return conn, err
 }
 
-func (sc *ServiceCaller) marshalMessage(msg *dynamic.Message) ([]byte, error) {
+func (sc *ServiceCaller) marshalMessage(msg *dynamicpb.Message) ([]byte, error) {
 	if sc.outMsgFormat == Text {
-		return msg.MarshalText()
+		return prototext.Marshal(msg)
+		// return msg.MarshalText()
 	}
 
-	return msg.MarshalJSONPB(&jsonpb.Marshaler{
-		EmitDefaults: true,
-		Indent:       "  ",
-		OrigName:     !sc.outJsonNames,
-		AnyResolver:  &anyResolver{sc.fdescCache},
-	})
+	return protojson.MarshalOptions{
+		EmitUnpopulated: true,
+		Indent:          "  ",
+		UseProtoNames:   !sc.outJsonNames,
+		Resolver:        NewRes(sc.fdescCache),
+	}.Marshal(msg)
+
+	// return msg.MarshalJSONPB(&jsonpb.Marshaler{
+	// 	EmitDefaults: true,
+	// 	Indent:       "  ",
+	// 	OrigName:     !sc.outJsonNames,
+	// 	AnyResolver:  &anyResolver{sc.fdescCache},
+	// })
 }
 
-func (sc *ServiceCaller) unmarshalMessage(msg *dynamic.Message, b []byte) error {
+func (sc *ServiceCaller) unmarshalMessage(msg *dynamicpb.Message, b []byte) error {
 	if sc.inMsgFormat == Text {
-		return msg.UnmarshalText(b)
+		return prototext.Unmarshal(b, msg)
+		// return msg.UnmarshalText(b)
 	}
 
-	return msg.UnmarshalJSONPB(&jsonpb.Unmarshaler{
-		AnyResolver: &anyResolver{sc.fdescCache},
-	}, b)
+	return protojson.UnmarshalOptions{
+		AllowPartial: true,
+		Resolver:     NewRes(sc.fdescCache),
+	}.Unmarshal(b, msg)
+
+	// return msg.UnmarshalJSONPB(&jsonpb.Unmarshaler{
+	// 	AnyResolver: &anyResolver{sc.fdescCache},
+	// }, b)
 }
