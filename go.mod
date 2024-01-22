@@ -7,7 +7,7 @@ require (
 	github.com/ArthurHlt/go-eureka-client v1.1.0
 	github.com/golang/protobuf v1.5.3
 	github.com/gookit/color v1.5.4
-	github.com/jhump/protoreflect v1.15.4
+	github.com/jhump/protoreflect v1.15.5
 	github.com/peterh/liner v1.2.2
 	github.com/spyzhov/ajson v0.9.0
 	github.com/stretchr/testify v1.8.4
@@ -19,7 +19,7 @@ require (
 )
 
 require (
-	github.com/bufbuild/protocompile v0.7.1 // indirect
+	github.com/bufbuild/protocompile v0.8.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
