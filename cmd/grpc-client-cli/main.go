@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/cliext"
+	"github.com/vadimi/grpc-client-cli/internal/fs"
 )
 
 const (
@@ -224,8 +225,8 @@ func runApp(c *cli.Context, opts *startOpts) (e error) {
 	opts.CACert = c.String("cacert")
 	opts.Cert = c.String("cert")
 	opts.CertKey = c.String("certkey")
-	opts.Protos = c.StringSlice("proto")
-	opts.ProtoImports = c.StringSlice("protoimports")
+	opts.Protos = fs.NormalizePaths(c.StringSlice("proto"))
+	opts.ProtoImports = fs.NormalizePaths(c.StringSlice("protoimports"))
 	opts.InFormat = parseMsgFormat(c.Generic("informat"))
 	opts.OutFormat = parseMsgFormat(c.Generic("outformat"))
 	opts.Headers = cliext.ParseMapValue(c.Generic("header"))
