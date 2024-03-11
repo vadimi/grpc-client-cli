@@ -5,7 +5,7 @@ go 1.21.0
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/ArthurHlt/go-eureka-client v1.1.0
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/gookit/color v1.5.4
 	github.com/jhump/protoreflect v1.15.6
 	github.com/peterh/liner v1.2.2
