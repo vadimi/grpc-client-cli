@@ -7,7 +7,7 @@ require (
 	github.com/ArthurHlt/go-eureka-client v1.1.0
 	github.com/golang/protobuf v1.5.4
 	github.com/gookit/color v1.5.4
-	github.com/jhump/protoreflect v1.15.6
+	github.com/jhump/protoreflect v1.16.0
 	github.com/peterh/liner v1.2.2
 	github.com/spyzhov/ajson v0.9.1
 	github.com/stretchr/testify v1.9.0
@@ -15,11 +15,11 @@ require (
 	golang.org/x/text v0.14.0
 	google.golang.org/grpc v1.63.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.3.0
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.33.1-0.20240408130810-98873a205002
 )
 
 require (
-	github.com/bufbuild/protocompile v0.8.0 // indirect
+	github.com/bufbuild/protocompile v0.10.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
