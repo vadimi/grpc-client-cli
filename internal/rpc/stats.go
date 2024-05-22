@@ -13,13 +13,13 @@ import (
 type statsctxKey struct{}
 
 type Stats struct {
-	Duration     time.Duration
-	respSize     int64
-	reqSize      int64
 	reqHeaders   metadata.MD
 	respHeaders  metadata.MD
 	respTrailers metadata.MD
 	fullMethod   string
+	Duration     time.Duration
+	respSize     int64
+	reqSize      int64
 	sync.RWMutex
 }
 
@@ -78,8 +78,6 @@ func (s *Stats) record(rpcStats stats.RPCStats) {
 		s.fullMethod = v.FullMethod
 		s.Unlock()
 	case *stats.OutPayload:
-		atomic.AddInt64(&s.reqSize, int64(v.WireLength))
-	case *stats.OutTrailer:
 		atomic.AddInt64(&s.reqSize, int64(v.WireLength))
 	case *stats.End:
 		s.Duration = v.EndTime.Sub(v.BeginTime)

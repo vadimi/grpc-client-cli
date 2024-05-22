@@ -31,10 +31,6 @@ func TestRPCStatsRecording(t *testing.T) {
 		WireLength: 2,
 	})
 
-	h.HandleRPC(ctx, &stats.OutTrailer{
-		WireLength: 2,
-	})
-
 	h.HandleRPC(ctx, &stats.End{
 		BeginTime: begin,
 		EndTime:   end,
@@ -47,7 +43,7 @@ func TestRPCStatsRecording(t *testing.T) {
 		t.Errorf("invalid stats duration: %v, expected %v", s.Duration, expDur)
 	}
 
-	expectedReqSize := int64(4)
+	expectedReqSize := int64(2)
 	if s.ReqSize() != expectedReqSize {
 		t.Errorf("invalid req size: %d, expected: %d", s.ReqSize(), expectedReqSize)
 	}
