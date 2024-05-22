@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -113,15 +112,9 @@ func NewGrpcConnFactory(opts ...ConnFactoryOption) *GrpcConnFactory {
 	return f
 }
 
-func (f *GrpcConnFactory) GetConnContext(ctx context.Context, target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-	return f.getConn(target, func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-		return grpc.DialContext(ctx, target, opts...)
-	}, opts...)
-}
-
 func (f *GrpcConnFactory) GetConn(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 	return f.getConn(target, func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-		return grpc.Dial(target, opts...)
+		return grpc.NewClient(target, opts...)
 	})
 }
 
