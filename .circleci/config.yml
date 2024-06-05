@@ -21,7 +21,7 @@ jobs:
       - run:
           name: build
           command: |
-            curl -sL https://git.io/goreleaser | bash -s -- --skip-publish --clean --skip-validate
+            curl -sL https://git.io/goreleaser | bash -s -- --skip=publish,validate --clean
             find ./dist/ -not -name '*.tar.gz' -not -name '*.zip' -not -name 'dist' -delete
       - store_test_results:
           path: /tmp/test-results
