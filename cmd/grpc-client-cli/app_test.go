@@ -809,3 +809,37 @@ func checkStatsInOutput(t *testing.T, app *app, msg []byte, buf *bytes.Buffer) {
 		assert.Contains(t, res, e)
 	}
 }
+
+func TestJSONFieldMask(t *testing.T) {
+	appOpts := &startOpts{
+		Target:        app_testing.TestServerAddr(),
+		Deadline:      15,
+		IsInteractive: false,
+		OutJsonNames:  true,
+	}
+	buf := &bytes.Buffer{}
+	appOpts.w = buf
+	appOpts.ProtoImports = []string{"../../testdata/user_props.proto"}
+	app, err := newApp(appOpts)
+	require.NoError(t, err)
+
+	m, ok := findMethod(t, app, "grpc_client_cli.testing.TestService", "UnaryUpdateCall")
+	if !ok {
+		return
+	}
+	msgTmpl := `
+{
+  "update_mask": "some.field,other.field"
+}
+`
+	msg := []byte(msgTmpl)
+
+	err = app.callClientStream(context.Background(), m, [][]byte{msg})
+	require.NoError(t, err, "error executing callClientStream()")
+
+	res := buf.Bytes()
+	root, err := ajson.Unmarshal(res)
+	require.NoError(t, err, "error unmarshaling result json")
+
+	require.Equal(t, "some.field,other.field", jsonString(root, "$.updateMask"), "unexpected updateMask value")
+}

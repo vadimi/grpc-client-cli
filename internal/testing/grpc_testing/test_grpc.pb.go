@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion8
 const (
 	TestService_EmptyCall_FullMethodName           = "/grpc_client_cli.testing.TestService/EmptyCall"
 	TestService_UnaryCall_FullMethodName           = "/grpc_client_cli.testing.TestService/UnaryCall"
+	TestService_UnaryUpdateCall_FullMethodName     = "/grpc_client_cli.testing.TestService/UnaryUpdateCall"
 	TestService_StreamingOutputCall_FullMethodName = "/grpc_client_cli.testing.TestService/StreamingOutputCall"
 	TestService_StreamingInputCall_FullMethodName  = "/grpc_client_cli.testing.TestService/StreamingInputCall"
 	TestService_FullDuplexCall_FullMethodName      = "/grpc_client_cli.testing.TestService/FullDuplexCall"
@@ -41,6 +42,9 @@ type TestServiceClient interface {
 	// One request followed by one response.
 	// The server returns the client payload as-is.
 	UnaryCall(ctx context.Context, in *SimpleRequest, opts ...grpc.CallOption) (*SimpleResponse, error)
+	// One request followed by one response.
+	// The server returns the client payload as-is.
+	UnaryUpdateCall(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
 	// One request followed by a sequence of responses (streamed download).
 	// The server returns the payload with client desired type and sizes.
 	StreamingOutputCall(ctx context.Context, in *StreamingOutputCallRequest, opts ...grpc.CallOption) (TestService_StreamingOutputCallClient, error)
@@ -81,6 +85,16 @@ func (c *testServiceClient) UnaryCall(ctx context.Context, in *SimpleRequest, op
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SimpleResponse)
 	err := c.cc.Invoke(ctx, TestService_UnaryCall_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testServiceClient) UnaryUpdateCall(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateResponse)
+	err := c.cc.Invoke(ctx, TestService_UnaryUpdateCall_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +244,7 @@ func (c *testServiceClient) UnaryAny(ctx context.Context, in *SimpleAnyRequest, 
 }
 
 // TestServiceServer is the server API for TestService service.
-// All implementations should embed UnimplementedTestServiceServer
+// All implementations must embed UnimplementedTestServiceServer
 // for forward compatibility
 //
 // A simple service to test the various types of RPCs and experiment with
@@ -241,6 +255,9 @@ type TestServiceServer interface {
 	// One request followed by one response.
 	// The server returns the client payload as-is.
 	UnaryCall(context.Context, *SimpleRequest) (*SimpleResponse, error)
+	// One request followed by one response.
+	// The server returns the client payload as-is.
+	UnaryUpdateCall(context.Context, *UpdateRequest) (*UpdateResponse, error)
 	// One request followed by a sequence of responses (streamed download).
 	// The server returns the payload with client desired type and sizes.
 	StreamingOutputCall(*StreamingOutputCallRequest, TestService_StreamingOutputCallServer) error
@@ -257,9 +274,10 @@ type TestServiceServer interface {
 	// first request.
 	HalfDuplexCall(TestService_HalfDuplexCallServer) error
 	UnaryAny(context.Context, *SimpleAnyRequest) (*SimpleAnyResponse, error)
+	mustEmbedUnimplementedTestServiceServer()
 }
 
-// UnimplementedTestServiceServer should be embedded to have forward compatible implementations.
+// UnimplementedTestServiceServer must be embedded to have forward compatible implementations.
 type UnimplementedTestServiceServer struct {
 }
 
@@ -268,6 +286,9 @@ func (UnimplementedTestServiceServer) EmptyCall(context.Context, *emptypb.Empty)
 }
 func (UnimplementedTestServiceServer) UnaryCall(context.Context, *SimpleRequest) (*SimpleResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnaryCall not implemented")
+}
+func (UnimplementedTestServiceServer) UnaryUpdateCall(context.Context, *UpdateRequest) (*UpdateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnaryUpdateCall not implemented")
 }
 func (UnimplementedTestServiceServer) StreamingOutputCall(*StreamingOutputCallRequest, TestService_StreamingOutputCallServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamingOutputCall not implemented")
@@ -284,6 +305,7 @@ func (UnimplementedTestServiceServer) HalfDuplexCall(TestService_HalfDuplexCallS
 func (UnimplementedTestServiceServer) UnaryAny(context.Context, *SimpleAnyRequest) (*SimpleAnyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnaryAny not implemented")
 }
+func (UnimplementedTestServiceServer) mustEmbedUnimplementedTestServiceServer() {}
 
 // UnsafeTestServiceServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to TestServiceServer will
@@ -328,6 +350,24 @@ func _TestService_UnaryCall_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TestServiceServer).UnaryCall(ctx, req.(*SimpleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestService_UnaryUpdateCall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestServiceServer).UnaryUpdateCall(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TestService_UnaryUpdateCall_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestServiceServer).UnaryUpdateCall(ctx, req.(*UpdateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -463,6 +503,10 @@ var TestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UnaryCall",
 			Handler:    _TestService_UnaryCall_Handler,
+		},
+		{
+			MethodName: "UnaryUpdateCall",
+			Handler:    _TestService_UnaryUpdateCall_Handler,
 		},
 		{
 			MethodName: "UnaryAny",

@@ -81,6 +81,25 @@ func (testService) UnaryCall(ctx context.Context, req *grpc_testing.SimpleReques
 	}, nil
 }
 
+func (testService) UnaryUpdateCall(ctx context.Context, req *grpc_testing.UpdateRequest) (*grpc_testing.UpdateResponse, error) {
+	checkHeaders := extractCheckHeaders(ctx)
+	if len(checkHeaders) > 0 {
+		imd, _ := metadata.FromIncomingContext(ctx)
+		for _, hkv := range checkHeaders {
+			values := imd.Get(hkv.key)
+			if len(values) > 0 {
+				if values[0] != hkv.value {
+					return nil, status.Errorf(codes.InvalidArgument, "header '%s' validation failed", hkv.key)
+				}
+			}
+		}
+	}
+
+	return &grpc_testing.UpdateResponse{
+		UpdateMask: req.UpdateMask,
+	}, nil
+}
+
 func (testService) StreamingOutputCall(req *grpc_testing.StreamingOutputCallRequest, str grpc_testing.TestService_StreamingOutputCallServer) error {
 	if req.ResponseStatus != nil && req.ResponseStatus.Code != int32(codes.OK) {
 		return status.Error(codes.Code(req.ResponseStatus.Code), "error")

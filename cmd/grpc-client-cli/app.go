@@ -18,6 +18,7 @@ import (
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
 var errNoMethod = errors.New("no method")
@@ -25,7 +26,7 @@ var errNoMethod = errors.New("no method")
 type app struct {
 	connFact      *rpc.GrpcConnFactory
 	servicesList  []*caller.ServiceMeta
-	fdescCache    *caller.FileDescCache
+	fdescCache    *protoregistry.Files
 	messageReader *msgReader
 	opts          *startOpts
 	w             io.Writer
@@ -122,7 +123,13 @@ func newApp(opts *startOpts) (*app, error) {
 		return nil, err
 	}
 
-	a.fdescCache = caller.NewFileDescCache(append(services.Files(), additionalFiles...))
+	a.fdescCache = &protoregistry.Files{}
+	for _, file := range services.Files() {
+		a.fdescCache.RegisterFile(file.UnwrapFile())
+	}
+	for _, file := range additionalFiles {
+		a.fdescCache.RegisterFile(file.UnwrapFile())
+	}
 
 	a.servicesList = services
 
