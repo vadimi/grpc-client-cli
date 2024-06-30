@@ -2,7 +2,6 @@ package caller
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
@@ -12,7 +11,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/runtime/protoiface"
 	"google.golang.org/protobuf/types/dynamicpb"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 var customAnyDescr *desc.MessageDescriptor
@@ -54,15 +52,11 @@ func NewRes(fdescCache *FileDescCache) *anyResolver2 {
 }
 
 func (t *anyResolver2) FindMessageByURL(url string) (protoreflect.MessageType, error) {
-	a := anypb.Any{}
 	mt, err := t.Types.FindMessageByURL(url)
 	if err != nil {
 		if errors.Is(err, protoregistry.NotFound) {
-			// e := &api.TypeResolveError{}
-			// return e.ProtoReflect().Type(), nil
-			mmm := &anyWrapper2{dynamicpb.NewMessage(customAnyDescr.UnwrapMessage())}
-			tt := mmm.ProtoReflect().Type()
-			tt.Descriptor()
+			mmm := dynamicpb.NewMessage(customAnyDescr.UnwrapMessage())
+			tt := &unknownMsgType{mmm}
 			return tt, nil
 		}
 		return mt, err
@@ -83,34 +77,40 @@ func (a *anyResolver) Resolve(typeURL string) (proto.Message, error) {
 	return &anyWrapper{dynamic.NewMessage(customAnyDescr)}, nil
 }
 
+type unknownMsgType struct {
+	m *dynamicpb.Message
+}
+
+func (u *unknownMsgType) New() protoreflect.Message {
+	return &anyWrapper2{u.m}
+}
+
+func (u *unknownMsgType) Zero() protoreflect.Message {
+	return &anyWrapper2{u.m}
+}
+
+func (u *unknownMsgType) Descriptor() protoreflect.MessageDescriptor {
+	return u.m.Descriptor()
+}
+
 type anyWrapper2 struct {
 	*dynamicpb.Message
 }
 
-func (a *anyWrapper2) Reset() {
-	fmt.Println("ddddfdfdfd333")
+func (m *anyWrapper2) Interface() protoreflect.ProtoMessage {
+	return m
 }
 
-func (a *anyWrapper2) Unmarshal(i protoiface.UnmarshalInput) (protoiface.UnmarshalOutput, error) {
-	fmt.Println("111")
-	return protoiface.UnmarshalOutput{}, errors.New("fdfdfdf")
-}
-
-func (a *anyWrapper2) New() protoreflect.Message {
-	panic("ddd1")
+func (m *anyWrapper2) ProtoReflect() protoreflect.Message {
+	return m
 }
 
 func (a *anyWrapper2) ProtoMethods() *protoiface.Methods {
-	fmt.Println("33333")
 	return &protoiface.Methods{
 		Unmarshal: func(in protoiface.UnmarshalInput) (protoiface.UnmarshalOutput, error) {
-			fmt.Println("eeee999999")
-			// v := in.Message.(*anyWrapper2)
-			// fmt.Println(v)
-			// if !ok {
-			// 	return protoiface.UnmarshalOutput{}, errors.New("%T does not implement Unmarshal", v)
-			// }
-			return protoiface.UnmarshalOutput{}, errors.New("dddd333")
+			v := in.Message.(*anyWrapper2)
+			v.Set(v.Descriptor().Fields().ByName("err"), protoreflect.ValueOfString("type not found"))
+			return protoiface.UnmarshalOutput{}, nil
 		},
 		Flags: protoiface.SupportMarshalDeterministic,
 	}
