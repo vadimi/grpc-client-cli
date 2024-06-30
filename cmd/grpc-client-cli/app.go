@@ -18,7 +18,6 @@ import (
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
 var errNoMethod = errors.New("no method")
@@ -26,7 +25,6 @@ var errNoMethod = errors.New("no method")
 type app struct {
 	connFact      *rpc.GrpcConnFactory
 	servicesList  []*caller.ServiceMeta
-	fdescCache    *protoregistry.Files
 	messageReader *msgReader
 	opts          *startOpts
 	w             io.Writer
@@ -123,13 +121,7 @@ func newApp(opts *startOpts) (*app, error) {
 		return nil, err
 	}
 
-	a.fdescCache = &protoregistry.Files{}
-	for _, file := range services.Files() {
-		a.fdescCache.RegisterFile(file.UnwrapFile())
-	}
-	for _, file := range additionalFiles {
-		a.fdescCache.RegisterFile(file.UnwrapFile())
-	}
+	caller.RegisterFiles(append(services.Files(), additionalFiles...)...)
 
 	a.servicesList = services
 
@@ -260,7 +252,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 
 // callClientStream calls unary or client stream method
 func (a *app) callClientStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.fdescCache, a.opts.OutJsonNames)
+	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.opts.OutJsonNames)
 
 	result, err := serviceCaller.CallClientStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 	if err != nil {
@@ -279,7 +271,7 @@ func (a *app) printResult(r []byte) {
 
 // callStream calls both server or bi-directional stream methods
 func (a *app) callStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.fdescCache, a.opts.OutJsonNames)
+	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.opts.OutJsonNames)
 	result, errChan := serviceCaller.CallStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 
 	a.printer.BeginArray()

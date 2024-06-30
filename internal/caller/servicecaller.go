@@ -14,7 +14,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/encoding/prototext"
-	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/dynamicpb"
 
 	"github.com/jhump/protoreflect/desc"
@@ -105,16 +104,14 @@ type ServiceCaller struct {
 	connFact     *rpc.GrpcConnFactory
 	inMsgFormat  MsgFormat
 	outMsgFormat MsgFormat
-	fdescCache   *protoregistry.Files
 	outJsonNames bool
 }
 
-func NewServiceCaller(connFact *rpc.GrpcConnFactory, inMsgFormat, outMsgFormat MsgFormat, fdescCache *protoregistry.Files, outJsonNames bool) *ServiceCaller {
+func NewServiceCaller(connFact *rpc.GrpcConnFactory, inMsgFormat, outMsgFormat MsgFormat, outJsonNames bool) *ServiceCaller {
 	return &ServiceCaller{
 		connFact:     connFact,
 		inMsgFormat:  inMsgFormat,
 		outMsgFormat: outMsgFormat,
-		fdescCache:   fdescCache,
 		outJsonNames: outJsonNames,
 	}
 }
@@ -234,7 +231,7 @@ func (sc *ServiceCaller) getConn(target string) (*grpc.ClientConn, error) {
 func (sc *ServiceCaller) marshalMessage(msg *dynamicpb.Message) ([]byte, error) {
 	if sc.outMsgFormat == Text {
 		opts := prototext.MarshalOptions{
-			Resolver: dynamicpb.NewTypes(sc.fdescCache),
+			Resolver: newResolver(),
 		}
 		return opts.Marshal(msg)
 	}
@@ -243,7 +240,7 @@ func (sc *ServiceCaller) marshalMessage(msg *dynamicpb.Message) ([]byte, error) 
 		EmitDefaultValues: true,
 		Indent:            "  ",
 		UseProtoNames:     !sc.outJsonNames,
-		Resolver:          dynamicpb.NewTypes(sc.fdescCache),
+		Resolver:          newResolver(),
 	}
 	return opts.Marshal(msg)
 }
@@ -251,13 +248,14 @@ func (sc *ServiceCaller) marshalMessage(msg *dynamicpb.Message) ([]byte, error) 
 func (sc *ServiceCaller) unmarshalMessage(msg *dynamicpb.Message, b []byte) error {
 	if sc.inMsgFormat == Text {
 		opts := prototext.UnmarshalOptions{
-			Resolver: dynamicpb.NewTypes(sc.fdescCache),
+			Resolver: newResolver(),
 		}
 		return opts.Unmarshal(b, msg)
 	}
 
 	opts := protojson.UnmarshalOptions{
-		Resolver: dynamicpb.NewTypes(sc.fdescCache),
+		AllowPartial: true,
+		Resolver:     newResolver(),
 	}
 
 	return opts.Unmarshal(b, msg)
