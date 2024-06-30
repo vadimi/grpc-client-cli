@@ -2,6 +2,7 @@ package caller
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/any"
@@ -12,6 +13,7 @@ import (
 	"github.com/vadimi/grpc-client-cli/internal/testing/grpc_testing"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func TestMarshalJSON(t *testing.T) {
@@ -27,7 +29,7 @@ func TestMarshalJSON(t *testing.T) {
 	nameField := m.Descriptor().Fields().ByName("name")
 	m.Set(nameField, protoreflect.ValueOfString("test"))
 
-	sc := NewServiceCaller(nil, JSON, JSON, nil, false)
+	sc := NewServiceCaller(nil, JSON, JSON, false)
 	b, err := sc.marshalMessage(m)
 	require.NoError(t, err)
 
@@ -57,11 +59,11 @@ func TestMarshalText(t *testing.T) {
 	dynRS.Set(messageField, protoreflect.ValueOfString("oops"))
 	dynReq.Set(responseStatusField, protoreflect.ValueOf(dynRS))
 
-	sc := NewServiceCaller(nil, JSON, Text, nil, false)
+	sc := NewServiceCaller(nil, JSON, Text, false)
 	res, err := sc.marshalMessage(dynReq)
 	require.NoError(t, err)
 
-	assert.Equal(t, `response_status:{code:1  message:"oops"}`, string(res))
+	assert.Equal(t, "response_status:{code:1 message:\"oops\"}", strings.ReplaceAll(string(res), "  ", " "))
 }
 
 func TestMarshalJSON_AnyNotFound(t *testing.T) {
@@ -74,22 +76,33 @@ func TestMarshalJSON_AnyNotFound(t *testing.T) {
 		Build()
 	require.NoError(t, err, "error building new message descriptor")
 
-	aValue := &any.Any{
+	aValue := &anypb.Any{
 		TypeUrl: "test.protobuf.DoesNotExist",
-		Value:   []byte{'1', '2', '3'},
+		Value:   []byte("MTIz"),
 	}
 	m := dynamicpb.NewMessage(md.UnwrapMessage())
+	m.Set(m.Descriptor().Fields().ByName("id"), protoreflect.ValueOf(int32(1)))
+	m.Set(m.Descriptor().Fields().ByName("name"), protoreflect.ValueOf("test"))
+	m.Set(m.Descriptor().Fields().ByName("a"), protoreflect.ValueOfMessage(aValue.ProtoReflect()))
 
-	idField := m.Descriptor().Fields().ByName("id")
-	m.Set(idField, protoreflect.ValueOfInt32(1))
+	sc := NewServiceCaller(nil, JSON, JSON, false)
+	b, err := sc.marshalMessage(m)
+	require.NoError(t, err)
 
-	nameField := m.Descriptor().Fields().ByName("name")
-	m.Set(nameField, protoreflect.ValueOfString("test"))
+	res := struct {
+		ID   int
+		Name string
+		A    struct {
+			TypeURL string `json:"@type"`
+			Err     string
+		}
+	}{}
 
-	aField := m.Descriptor().Fields().ByName("a")
-	m.Set(aField, protoreflect.ValueOfMessage(aValue.ProtoReflect()))
+	err = json.Unmarshal(b, &res)
+	require.NoError(t, err)
 
-	sc := NewServiceCaller(nil, JSON, JSON, nil, false)
-	_, err = sc.marshalMessage(m)
-	assert.ErrorContains(t, err, "unable to resolve \"test.protobuf.DoesNotExist\": not found")
+	assert.Equal(t, 1, res.ID)
+	assert.Equal(t, "test", res.Name)
+	assert.Equal(t, aValue.TypeUrl, res.A.TypeURL)
+	assert.NotEmpty(t, res.A.Err, "err should not be empty")
 }

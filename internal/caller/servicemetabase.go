@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jhump/protoreflect/desc"
+	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
 type ServiceMetaData interface {
@@ -44,4 +45,14 @@ func (s serviceMetaBase) GetAdditionalFiles(protoImports []string) ([]*desc.File
 		return nil, fmt.Errorf("error parsing additional proto files: %w", err)
 	}
 	return fileDesc, nil
+}
+
+func RegisterFiles(fds ...*desc.FileDescriptor) {
+	for _, fd := range fds {
+		protoFile := fd.UnwrapFile()
+		_, err := protoregistry.GlobalFiles.FindFileByPath(protoFile.Path())
+		if errors.Is(err, protoregistry.NotFound) {
+			protoregistry.GlobalFiles.RegisterFile(protoFile)
+		}
+	}
 }
