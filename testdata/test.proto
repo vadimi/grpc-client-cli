@@ -4,6 +4,7 @@ package grpc_client_cli.testing;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/any.proto";
+import "google/protobuf/field_mask.proto";
 
 option go_package = "/;grpc_testing";
 
@@ -25,6 +26,16 @@ message SimpleRequest {
   EchoStatus response_status = 1;
 
   User user = 2;
+}
+
+// Dummy request with a fieldmask
+message UpdateRequest {
+  google.protobuf.FieldMask update_mask = 1;
+}
+
+// Dummy response with a fieldmask
+message UpdateResponse {
+  google.protobuf.FieldMask update_mask = 1;
 }
 
 // Unary response, as configured by the request.
@@ -92,6 +103,10 @@ service TestService {
   // One request followed by one response.
   // The server returns the client payload as-is.
   rpc UnaryCall(SimpleRequest) returns (SimpleResponse);
+
+  // One request followed by one response.
+  // The server returns the client payload as-is.
+  rpc UnaryUpdateCall(UpdateRequest) returns (UpdateResponse);
 
   // One request followed by a sequence of responses (streamed download).
   // The server returns the payload with client desired type and sizes.
