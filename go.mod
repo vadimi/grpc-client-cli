@@ -5,7 +5,6 @@ go 1.21.0
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/ArthurHlt/go-eureka-client v1.1.0
-	github.com/golang/protobuf v1.5.4
 	github.com/gookit/color v1.5.4
 	github.com/jhump/protoreflect v1.16.0
 	github.com/peterh/liner v1.2.2
@@ -22,6 +21,7 @@ require (
 	github.com/bufbuild/protocompile v0.10.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect

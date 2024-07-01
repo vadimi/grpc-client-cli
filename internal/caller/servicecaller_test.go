@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/protobuf/ptypes/any"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/builder"
 	"github.com/stretchr/testify/assert"
@@ -67,7 +66,7 @@ func TestMarshalText(t *testing.T) {
 }
 
 func TestMarshalJSON_AnyNotFound(t *testing.T) {
-	mdAny, err := desc.LoadMessageDescriptorForMessage((*any.Any)(nil))
+	mdAny, err := desc.LoadMessageDescriptorForMessage((*anypb.Any)(nil))
 	require.NoError(t, err, "failed to load Any message descriptor")
 	md, err := builder.NewMessage("any").
 		AddField(builder.NewField("id", builder.FieldTypeInt32())).

@@ -8,11 +8,12 @@ import (
 	"os"
 	"sort"
 
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/dynamicpb"
 )
 
 type msgBuffer struct {
@@ -157,11 +158,11 @@ func fieldNames(messageDesc *desc.MessageDescriptor) []string {
 }
 
 func getMessageDefaults(messageDesc *desc.MessageDescriptor) string {
-	msg := dynamic.NewMessage(messageDesc)
-	msgJSON, _ := msg.MarshalJSONPB(&jsonpb.Marshaler{
-		EmitDefaults: true,
-		OrigName:     true,
-	})
+	msg := dynamicpb.NewMessage(messageDesc.UnwrapMessage())
+	msgJSON, _ := protojson.MarshalOptions{
+		EmitDefaultValues: true,
+		UseProtoNames:     true,
+	}.Marshal(msg)
 
 	return string(msgJSON)
 }
