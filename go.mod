@@ -8,7 +8,7 @@ require (
 	github.com/gookit/color v1.5.4
 	github.com/jhump/protoreflect v1.16.0
 	github.com/peterh/liner v1.2.2
-	github.com/spyzhov/ajson v0.9.1
+	github.com/spyzhov/ajson v0.9.3
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.2
 	golang.org/x/text v0.16.0
