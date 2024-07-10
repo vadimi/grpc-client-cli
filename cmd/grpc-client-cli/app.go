@@ -121,7 +121,10 @@ func newApp(opts *startOpts) (*app, error) {
 		return nil, err
 	}
 
-	caller.RegisterFiles(append(services.Files(), additionalFiles...)...)
+	err = caller.RegisterFiles(append(services.Files(), additionalFiles...)...)
+	if err != nil && a.opts.Verbose {
+		fmt.Println(err)
+	}
 
 	a.servicesList = services
 
