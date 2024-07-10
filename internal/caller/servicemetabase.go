@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jhump/protoreflect/desc"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
@@ -51,8 +52,20 @@ func RegisterFiles(fds ...*desc.FileDescriptor) {
 	for _, fd := range fds {
 		protoFile := fd.UnwrapFile()
 		_, err := protoregistry.GlobalFiles.FindFileByPath(protoFile.Path())
-		if errors.Is(err, protoregistry.NotFound) {
+		if errors.Is(err, protoregistry.NotFound) && shouldRegister(protoFile) {
 			protoregistry.GlobalFiles.RegisterFile(protoFile)
 		}
 	}
+}
+
+func shouldRegister(fd protoreflect.FileDescriptor) bool {
+	for i := 0; i < fd.Messages().Len(); i++ {
+		msg := fd.Messages().Get(i)
+		_, err := protoregistry.GlobalTypes.FindMessageByURL(string(msg.FullName()))
+		if errors.Is(err, protoregistry.NotFound) {
+			return true
+		}
+	}
+
+	return false
 }
