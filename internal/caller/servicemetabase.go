@@ -4,10 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/jhump/protoreflect/desc"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
+
+func init() {
+	// don't panic on proto registration conflicts, return errors instead
+	os.Setenv("GOLANG_PROTOBUF_REGISTRATION_CONFLICT", "warn")
+}
 
 type ServiceMetaData interface {
 	GetServiceMetaDataList(context.Context) (ServiceMetaList, error)
@@ -47,12 +54,28 @@ func (s serviceMetaBase) GetAdditionalFiles(protoImports []string) ([]*desc.File
 	return fileDesc, nil
 }
 
-func RegisterFiles(fds ...*desc.FileDescriptor) {
+func RegisterFiles(fds ...*desc.FileDescriptor) error {
+	errs := []error{}
 	for _, fd := range fds {
 		protoFile := fd.UnwrapFile()
 		_, err := protoregistry.GlobalFiles.FindFileByPath(protoFile.Path())
-		if errors.Is(err, protoregistry.NotFound) {
-			protoregistry.GlobalFiles.RegisterFile(protoFile)
+		if errors.Is(err, protoregistry.NotFound) && shouldRegister(protoFile) {
+			if err := protoregistry.GlobalFiles.RegisterFile(protoFile); err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
+	return errors.Join(errs...)
+}
+
+func shouldRegister(fd protoreflect.FileDescriptor) bool {
+	for i := 0; i < fd.Messages().Len(); i++ {
+		msg := fd.Messages().Get(i)
+		_, err := protoregistry.GlobalTypes.FindMessageByURL(string(msg.FullName()))
+		if errors.Is(err, protoregistry.NotFound) {
+			return true
+		}
+	}
+
+	return false
 }
