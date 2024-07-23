@@ -260,6 +260,9 @@ func SetupTestServer() error {
 	}
 
 	testGrpcTLSServer, testServerTLSAddr, err = setupTestServer(creds)
+	if err != nil {
+		return err
+	}
 
 	// mTLS
 	mTLSCreds, err := getCreds(true)
@@ -269,7 +272,7 @@ func SetupTestServer() error {
 
 	testGrpcMTLSServer, testServerMTLSAddr, err = setupTestServer(mTLSCreds)
 
-	return nil
+	return err
 }
 
 func setupTestServer(opts ...grpc.ServerOption) (*grpc.Server, string, error) {
