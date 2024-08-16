@@ -60,13 +60,13 @@ jobs:
         id: prep
         run: |
           find . -name "grpc-client-cli*" -type f -exec chmod +x {} \;
-          echo ::set-output name=tags::${GITHUB_REF#refs/tags/v}
+          echo "tags=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - uses: ncipollo/release-action@v1
         with:
-          artifacts: "pkg/grpc-client-cli*"
+          artifacts: "dist/grpc-client-cli*"
           tag: ${{ github.ref }}
-          name: ${{ github.ref }}
+          name: ${{ steps.prep.outputs.tags }}
           body: |
             v${{ steps.prep.outputs.tags }}
           draft: false
