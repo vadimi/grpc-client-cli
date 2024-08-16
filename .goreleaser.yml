@@ -1,3 +1,4 @@
+version: 2
 builds:
   - binary: grpc-client-cli
     main: ./cmd/grpc-client-cli
