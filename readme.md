@@ -162,7 +162,7 @@ For example:
 }
 ```
 
-2. `Duration` mapped to a string representation in seconds: `60s`
+2. `Duration` mapped to a string representation in seconds.
 
 For example:
 
