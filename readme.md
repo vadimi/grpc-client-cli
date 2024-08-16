@@ -8,12 +8,12 @@
 
 Download the binary and install it to `/usr/local` directory:
 
-- Linux: `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.20.3/grpc-client-cli_linux_x86_64.tar.gz | tar -C /usr/local/bin -xz` (you might need to add `sudo` before tar)
-- macOS: `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.20.3/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local/bin -xz`
+- Linux: `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.21.0/grpc-client-cli_linux_x86_64.tar.gz | tar -C /usr/local/bin -xz` (you might need to add `sudo` before tar)
+- macOS: `curl -L https://github.com/vadimi/grpc-client-cli/releases/download/v1.21.0/grpc-client-cli_darwin_x86_64.tar.gz | tar -C /usr/local/bin -xz`
 
 For go `1.17+` use this command to install the app to `$GOPATH/bin` directory:
 
-- `go install github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.20.3`
+- `go install github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@v1.21.0`
 - `go install github.com/vadimi/grpc-client-cli/cmd/grpc-client-cli@latest`
 
 ## Usage
@@ -162,13 +162,13 @@ For example:
 }
 ```
 
-2. `Duration` mapped to a string in the following format: `00h00m00s`
+2. `Duration` mapped to a string representation in seconds: `60s`
 
 For example:
 
 ```json
 {
-  "start_time": "20h00m00s",
+  "start_time": "72000s",
   "some_other_duration": "1s"
 }
 ```
