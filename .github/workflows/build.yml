@@ -35,7 +35,7 @@ jobs:
 
       - name: prepare dist directory
         run: |
-          find ./dist/ -not -name '*.tar.gz' -not -name '*.zip' -not -name 'dist' -not -wholename './dist/grpc-client-cli_linux_amd*' -not -name 'pkg' -delete
+          find ./dist/ -not -name '*.tar.gz' -not -name '*.zip' -not -name 'dist' -delete
 
       - name: store artifacts
         uses: actions/upload-artifact@v4
