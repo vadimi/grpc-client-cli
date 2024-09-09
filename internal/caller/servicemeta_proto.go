@@ -43,8 +43,8 @@ func (smp *serviceMetadataProto) GetServiceMetaDataList(ctx context.Context) (Se
 
 			for _, m := range svcData.Methods {
 				u := newJsonNamesUpdater()
-				u.updateJSONNames(m.GetInputType())
-				u.updateJSONNames(m.GetOutputType())
+				u.updateJSONNames(m.GetInputType().UnwrapMessage())
+				u.updateJSONNames(m.GetOutputType().UnwrapMessage())
 			}
 			res = append(res, svcData)
 		}

@@ -83,8 +83,8 @@ func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) (ServiceMe
 
 		for _, m := range svcData.Methods {
 			u := newJsonNamesUpdater()
-			u.updateJSONNames(m.GetInputType())
-			u.updateJSONNames(m.GetOutputType())
+			u.updateJSONNames(m.GetInputType().UnwrapMessage())
+			u.updateJSONNames(m.GetOutputType().UnwrapMessage())
 		}
 		res[i] = svcData
 	}

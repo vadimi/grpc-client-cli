@@ -5,14 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
-	"sort"
+	"slices"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoprint"
-	"github.com/jhump/protoreflect/dynamic"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/encoding/prototext"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
@@ -41,7 +43,7 @@ func newMsgBuffer(opts *msgBufferOptions) *msgBuffer {
 	return &msgBuffer{
 		nextPrompt: "Next message (press Ctrl-D to finish): ",
 		opts:       opts,
-		fieldNames: fieldNames(opts.messageDesc),
+		fieldNames: fieldNames(opts.messageDesc.UnwrapMessage()),
 		helpText:   getMessageDefaults(opts.messageDesc),
 		protoText:  protoString(opts.messageDesc),
 		w:          w,
@@ -119,8 +121,8 @@ func (b *msgBuffer) validate(msg []byte) error {
 }
 
 func (b *msgBuffer) validateText(msgTxt []byte) error {
-	msg := dynamic.NewMessage(b.opts.messageDesc)
-	return msg.UnmarshalText(msgTxt)
+	msg := dynamicpb.NewMessage(b.opts.messageDesc.UnwrapMessage())
+	return prototext.Unmarshal(msgTxt, msg)
 }
 
 func (b *msgBuffer) validateJSON(msgJSON []byte) error {
@@ -128,8 +130,8 @@ func (b *msgBuffer) validateJSON(msgJSON []byte) error {
 		return errors.New("syntax error: please provide valid json")
 	}
 
-	msg := dynamic.NewMessage(b.opts.messageDesc)
-	err := msg.UnmarshalJSON(msgJSON)
+	msg := dynamicpb.NewMessage(b.opts.messageDesc.UnwrapMessage())
+	err := protojson.Unmarshal(msgJSON, msg)
 	errFmt := "invalid message: %w"
 	if err == io.ErrUnexpectedEOF || err == io.EOF {
 		errFmt = "syntax error: %w"
@@ -140,20 +142,17 @@ func (b *msgBuffer) validateJSON(msgJSON []byte) error {
 	return nil
 }
 
-func fieldNames(messageDesc *desc.MessageDescriptor) []string {
+func fieldNames(messageDesc protoreflect.MessageDescriptor) []string {
 	fields := map[string]struct{}{}
 
 	walker := caller.NewFieldWalker()
-	walker.Walk(messageDesc, func(f *desc.FieldDescriptor) {
-		fields[f.GetName()] = struct{}{}
+	walker.Walk(messageDesc, func(f protoreflect.FieldDescriptor) {
+		fields[string(f.Name())] = struct{}{}
 	})
 
-	names := make([]string, 0, len(fields))
-	for f := range fields {
-		names = append(names, f)
-	}
+	names := slices.Collect(maps.Keys(fields))
 
-	sort.Strings(names)
+	slices.Sort(names)
 	return names
 }
 
