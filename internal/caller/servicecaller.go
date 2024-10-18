@@ -238,7 +238,7 @@ func (sc *ServiceCaller) marshalMessage(msg *dynamicpb.Message) ([]byte, error) 
 
 	opts := protojson.MarshalOptions{
 		EmitDefaultValues: true,
-		Indent:            " ",
+		Multiline:         true,
 		UseProtoNames:     !sc.outJsonNames,
 		Resolver:          newResolver(),
 	}

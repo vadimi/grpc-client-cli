@@ -67,7 +67,7 @@ func checkHealth(c *cli.Context, out io.Writer) error {
 
 	m := protojson.MarshalOptions{
 		EmitUnpopulated: true,
-		Indent:          " ",
+		Multiline:       true,
 	}
 
 	b, err := m.Marshal(resp)
