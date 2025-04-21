@@ -8,7 +8,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type healthService struct{}
+type healthService struct {
+	healthpb.UnimplementedHealthServer
+}
 
 func (s *healthService) Check(ctx context.Context, in *healthpb.HealthCheckRequest) (*healthpb.HealthCheckResponse, error) {
 	response := &healthpb.HealthCheckResponse{
