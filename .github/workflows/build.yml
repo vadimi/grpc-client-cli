@@ -19,11 +19,11 @@ jobs:
       - name: setup go
         uses: actions/setup-go@v5
         with:
-          go-version: '>=1.24.2'
+          go-version: '>=1.24.6'
 
       - name: test
         run: |
-          export GOTESTSUM_VERSION=1.12.0
+          export GOTESTSUM_VERSION=1.12.3
           curl -L https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz | sudo tar -C /usr/local/bin -xz
           gotestsum --format short-verbose --no-summary=skipped ./...
 
