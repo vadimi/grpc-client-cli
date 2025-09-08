@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/ArthurHlt/go-eureka-client v1.1.0
-	github.com/gookit/color v1.5.4
+	github.com/gookit/color v1.6.0
 	github.com/jhump/protoreflect v1.17.0
 	github.com/peterh/liner v1.2.2
 	github.com/spyzhov/ajson v0.9.6
