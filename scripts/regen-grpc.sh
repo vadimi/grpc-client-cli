@@ -1,25 +1,7 @@
 #!/bin/bash
-cwd=$(dirname "$0")
+root=$(git rev-parse --show-toplevel)
 
-# macos doesn't have readlink installed by default, so we need to replicate it here
-# to get the real path that grpc tooling needs
-function getRealPath {
-    TARGET_FILE=$1
-    cd `dirname $TARGET_FILE`
-    TARGET_FILE=`basename $TARGET_FILE`
-
-    while [ -L "$TARGET_FILE" ]
-    do
-        TARGET_FILE=`readlink $TARGET_FILE`
-        cd `dirname $TARGET_FILE`
-        TARGET_FILE=`basename $TARGET_FILE`
-    done
-
-    PHYS_DIR=`pwd -P`
-    echo $PHYS_DIR/$TARGET_FILE
-}
-
-localbin=$(getRealPath $cwd/../.bin)
+localbin="$root/.bin"
 
 os="linux-x86_64"
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -27,7 +9,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 # check that protoc compiler exists and download it if required
-PROTOBUF_VERSION=3.19.1
+PROTOBUF_VERSION=32.1
 PROTOC_FILENAME=protoc-${PROTOBUF_VERSION}-${os}.zip
 PROTOC_PATH=$localbin/protoc-$PROTOBUF_VERSION
 if [ ! -d $PROTOC_PATH ] ; then
@@ -39,8 +21,13 @@ if [ ! -d $PROTOC_PATH ] ; then
 fi
 
 # it gets the version of protoc-gen-go from go.mod file
-GOBIN=$localbin go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
-GOBIN=$localbin go install google.golang.org/protobuf/cmd/protoc-gen-go
+protoc_gen_go_grpc_plugin="$(go tool -n protoc-gen-go-grpc)"
+protoc_gen_go_grpc_plugin="$(go tool -n protoc-gen-go-grpc)"
+protoc_gen_go_plugin="$(go tool -n protoc-gen-go)"
+protoc_gen_go_plugin="$(go tool -n protoc-gen-go)"
 
-PATH=$PATH:$localbin $PROTOC_PATH/bin/protoc --go_out=$cwd/../internal/testing/grpc_testing --go-grpc_out=require_unimplemented_servers=false:$cwd/../internal/testing/grpc_testing -I"$cwd/../testdata" $cwd/../testdata/test.proto
+PATH=$PATH:$localbin $PROTOC_PATH/bin/protoc \
+  --plugin=protoc-gen-go-grpc="${protoc_gen_go_grpc_plugin}" \
+  --plugin=protoc-gen-go="${protoc_gen_go_plugin}" \
+  --go_out=$root/internal/testing/grpc_testing --go-grpc_out=require_unimplemented_servers=false:$root/internal/testing/grpc_testing -I"$root/testdata" $root/testdata/test.proto
 
