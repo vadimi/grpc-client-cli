@@ -30,12 +30,14 @@ func main() {
 			Aliases: []string{"s"},
 			Value:   "",
 			Usage:   "grpc full or partial service name",
+			EnvVars: []string{"GRPC_CLIENT_CLI_SERVICE"},
 		},
 		&cli.StringFlag{
 			Name:    "method",
 			Aliases: []string{"m"},
 			Value:   "",
 			Usage:   "grpc service method name",
+			EnvVars: []string{"GRPC_CLIENT_CLI_METHOD"},
 		},
 		&cli.StringFlag{
 			Name:    "input",
@@ -143,6 +145,7 @@ func main() {
 			Aliases:  []string{"a", "addr"},
 			Required: false,
 			Usage:    "host:port of the service",
+			EnvVars:  []string{"GRPC_CLIENT_CLI_ADDRESS", "GRPC_CLIENT_CLI_ADDR"},
 		},
 		&cli.BoolFlag{
 			Name:  "out-json-names",
