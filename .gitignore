@@ -2,3 +2,4 @@
 .bin
 *.exe
 .DS_Store
+.aider*

@@ -101,7 +101,7 @@ grpc-client-cli --address localhost:5050 health
 
 ### Non-interactive mode
 
-In non-interactive mode `grpc-client-cli` expects all parameters to be passed to execute gRPC service.
+In non-interactive mode `grpc-client-cli` expects all parameters to be passed to execute gRPC service. The address, service and method can also be provided through environment variables: `GRPC_CLIENT_CLI_ADDRESS` (or `GRPC_CLIENT_CLI_ADDR`), `GRPC_CLIENT_CLI_SERVICE`, `GRPC_CLIENT_CLI_METHOD`.
 
 **Pass message json through stdin**
 
