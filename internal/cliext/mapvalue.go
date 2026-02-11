@@ -8,9 +8,7 @@ import (
 	"time"
 )
 
-var (
-	slPfx = fmt.Sprintf("sl:::%d:::", time.Now().UTC().UnixNano())
-)
+var slPfx = fmt.Sprintf("sl:::%d:::", time.Now().UTC().UnixNano())
 
 // MapValue allows passing multiple key/value pairs from the command line args.
 // This is an extension for github.com/urfave/cli
@@ -74,8 +72,12 @@ func (mv MapValue) String() string {
 	return fmt.Sprint(mv.m)
 }
 
+func (mv *MapValue) Get() any {
+	return mv.m
+}
+
 // ParseMapValue returns map from the interface object
-func ParseMapValue(val interface{}) map[string][]string {
+func ParseMapValue(val any) map[string][]string {
 	if mval, ok := val.(*MapValue); ok {
 		return mval.m
 	}

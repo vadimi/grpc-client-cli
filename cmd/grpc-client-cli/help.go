@@ -3,14 +3,14 @@ package main
 import (
 	"runtime/debug"
 
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
-var helpTemplate = cli.AppHelpTemplate + `
-BUILD INFO:
-   go version: {{ExtraInfo.go_version}}{{if ExtraInfo.vcs_revision}}
-   revision: {{ExtraInfo.vcs_revision}}{{end}}
-`
+var helpTemplate = cli.RootCommandHelpTemplate + `
+{{with call .ExtraInfo}}BUILD INFO:
+   go version: {{index . "go_version"}}{{if index . "vcs_revision"}}
+   revision: {{index . "vcs_revision"}}{{end}}
+{{end}}`
 
 func getExtraInfo() map[string]string {
 	buildInfo, ok := debug.ReadBuildInfo()
