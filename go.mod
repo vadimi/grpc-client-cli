@@ -1,6 +1,6 @@
 module github.com/vadimi/grpc-client-cli
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
