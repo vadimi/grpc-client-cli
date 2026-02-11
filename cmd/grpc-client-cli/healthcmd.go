@@ -7,22 +7,22 @@ import (
 	"io"
 	"os"
 
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"github.com/vadimi/grpc-client-cli/internal/cliext"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func healthCmd(c *cli.Context) error {
-	return checkHealth(c, os.Stdout)
+func healthCmd(ctx context.Context, cmd *cli.Command) error {
+	return checkHealth(ctx, cmd, os.Stdout)
 }
 
-func checkHealth(c *cli.Context, out io.Writer) error {
-	target := c.String("address")
+func checkHealth(ctx context.Context, cmd *cli.Command, out io.Writer) error {
+	target := cmd.String("address")
 	if target == "" {
-		if c.NArg() > 0 {
-			target = c.Args().First()
+		if cmd.Args().Len() > 0 {
+			target = cmd.Args().First()
 		}
 	}
 
@@ -32,14 +32,14 @@ func checkHealth(c *cli.Context, out io.Writer) error {
 		return err
 	}
 
-	service := c.String("service")
-	tls := c.Bool("tls")
+	service := cmd.String("service")
+	tls := cmd.Bool("tls")
 	var cf *rpc.GrpcConnFactory
 	if tls {
-		insecure := c.Bool("insecure")
-		cACert := c.String("cacert")
-		cert := c.String("cert")
-		certKey := c.String("certkey")
+		insecure := cmd.Bool("insecure")
+		cACert := cmd.String("cacert")
+		cert := cmd.String("cert")
+		certKey := cmd.String("certkey")
 		cf = rpc.NewGrpcConnFactory(rpc.WithConnCred(insecure, cACert, cert, certKey))
 	} else {
 		cf = rpc.NewGrpcConnFactory()
@@ -50,15 +50,15 @@ func checkHealth(c *cli.Context, out io.Writer) error {
 		return err
 	}
 
-	deadline, err := cliext.ParseDuration(c.String("deadline"))
+	deadline, err := cliext.ParseDuration(cmd.String("deadline"))
 	if err != nil {
 		return cli.Exit(err, 1)
 	}
 
 	client := grpc_health_v1.NewHealthClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), deadline)
+	hctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
-	resp, err := client.Check(ctx, &grpc_health_v1.HealthCheckRequest{
+	resp, err := client.Check(hctx, &grpc_health_v1.HealthCheckRequest{
 		Service: service,
 	})
 	if err != nil {

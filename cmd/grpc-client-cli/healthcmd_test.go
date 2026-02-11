@@ -2,13 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
-	"flag"
 	"testing"
 
 	"github.com/spyzhov/ajson"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
 )
 
@@ -25,15 +25,21 @@ func TestHealthCheck(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			set := flag.NewFlagSet("test", 0)
-			set.String("deadline", "15", "")
-			set.String("service", c.service, "")
-			require.NoError(t, set.Parse([]string{app_testing.TestServerAddr()}))
-			ctx := cli.NewContext(nil, set, nil)
+			cmd := &cli.Command{
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "deadline", Value: "15"},
+					&cli.StringFlag{Name: "service"},
+					&cli.StringFlag{Name: "address"},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					return nil
+				},
+			}
+			require.NoError(t, cmd.Run(context.Background(), []string{"test", "--service", c.service, "--address", app_testing.TestServerAddr()}))
 
 			buf := &bytes.Buffer{}
 
-			err := checkHealth(ctx, buf)
+			err := checkHealth(context.Background(), cmd, buf)
 			if err != nil {
 				if !c.expErr {
 					t.Errorf("no error expected while checking health, got %v", err)
@@ -62,15 +68,21 @@ func TestHealthCheckError(t *testing.T) {
 	expectedExitCode := 1
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			set := flag.NewFlagSet("test", 0)
-			set.Int("deadline", 15, "")
-			set.String("service", c.service, "")
-			require.NoError(t, set.Parse([]string{app_testing.TestServerAddr()}))
-			ctx := cli.NewContext(nil, set, nil)
+			cmd := &cli.Command{
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "deadline", Value: "15"},
+					&cli.StringFlag{Name: "service"},
+					&cli.StringFlag{Name: "address"},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					return nil
+				},
+			}
+			require.NoError(t, cmd.Run(context.Background(), []string{"test", "--service", c.service, "--address", app_testing.TestServerAddr()}))
 
 			buf := &bytes.Buffer{}
 
-			err := checkHealth(ctx, buf)
+			err := checkHealth(context.Background(), cmd, buf)
 			if err == nil {
 				t.Error("error expected")
 			}
@@ -85,17 +97,23 @@ func TestHealthCheckError(t *testing.T) {
 }
 
 func TestHealthCheckTLS(t *testing.T) {
-	set := flag.NewFlagSet("test", 0)
-	set.String("deadline", "15", "")
-	set.String("service", "", "")
-	set.String("tls", "true", "")
-	set.String("cacert", "../../testdata/certs/test_ca.crt", "")
-	require.NoError(t, set.Parse([]string{app_testing.TestServerTLSAddr()}))
-	ctx := cli.NewContext(nil, set, nil)
+	cmd := &cli.Command{
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "deadline", Value: "15s"},
+			&cli.StringFlag{Name: "service"},
+			&cli.StringFlag{Name: "address"},
+			&cli.BoolFlag{Name: "tls"},
+			&cli.StringFlag{Name: "cacert"},
+		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			return nil
+		},
+	}
+	require.NoError(t, cmd.Run(context.Background(), []string{"test", "--service", "", "--address", app_testing.TestServerTLSAddr(), "--tls", "--cacert", "../../testdata/certs/test_ca.crt"}))
 
 	buf := &bytes.Buffer{}
 
-	err := checkHealth(ctx, buf)
+	err := checkHealth(context.Background(), cmd, buf)
 	require.NoError(t, err, "no error expected while checking health")
 
 	res := buf.Bytes()
