@@ -28,7 +28,10 @@ const loadBalancer = `{"loadBalancingConfig": [{"round_robin": {}}]}`
 func init() {
 	// TODO: remove that line when dns is default resolver
 	resolver.SetDefaultScheme("dns")
-	resolver.Register(eureka.NewEurekaBuilder())
+	eurekaBuilder := eureka.NewEurekaBuilder()
+	if eurekaBuilder != nil {
+		resolver.Register(eurekaBuilder)
+	}
 }
 
 type connMeta struct {

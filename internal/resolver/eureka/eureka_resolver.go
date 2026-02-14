@@ -1,3 +1,5 @@
+//go:build eureka
+
 package eureka
 
 import (
