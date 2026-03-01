@@ -153,7 +153,7 @@ func appCallUnaryServerError(t *testing.T, app *app) {
 }
 `
 
-	msg := []byte(fmt.Sprintf(msgTmpl, errCode))
+	msg := fmt.Appendf(nil, msgTmpl, errCode)
 
 	err := app.callClientStream(context.Background(), m, [][]byte{msg})
 	if err == nil {
@@ -181,11 +181,11 @@ func appCallUnary(t *testing.T, app *app, buf *bytes.Buffer) {
   "user": {"id": %d, "name": "%s"}
 }
 `
-	msg := []byte(fmt.Sprintf(msgTmpl, userId, userName))
+	msg := fmt.Appendf(nil, msgTmpl, userId, userName)
 
 	if app.opts.InFormat == caller.Text {
 		msgTmpl = `user { id: %d name: "%s" }`
-		msg = []byte(fmt.Sprintf(msgTmpl, userId, userName))
+		msg = fmt.Appendf(nil, msgTmpl, userId, userName)
 	}
 
 	err := app.callClientStream(context.Background(), m, [][]byte{msg})
@@ -239,11 +239,11 @@ func appCallStreamOutput(t *testing.T, app *app, buf *bytes.Buffer) {
 		return body
 	}
 
-	msg := []byte(fmt.Sprintf(msgTmpl, userName, respSize1, respSize2))
+	msg := fmt.Appendf(nil, msgTmpl, userName, respSize1, respSize2)
 
 	if app.opts.InFormat == caller.Text {
 		msgTmpl = `user { name: "%s"} response_parameters: {size: %d} response_parameters: {size: %d}`
-		msg = []byte(fmt.Sprintf(msgTmpl, userName, respSize1, respSize2))
+		msg = fmt.Appendf(nil, msgTmpl, userName, respSize1, respSize2)
 	}
 
 	err := app.callStream(context.Background(), m, [][]byte{msg})
@@ -297,8 +297,8 @@ func appCallBidiStreamErrorProcessing(t *testing.T, app *app, buf *bytes.Buffer)
 		return strings.Repeat(userName, c)
 	}
 
-	msg := []byte(fmt.Sprintf(msgTmpl, getEncBody(1), respSize1, respSize2))
-	msgErr := []byte(fmt.Sprintf(msgTmplErr, errCode))
+	msg := fmt.Appendf(nil, msgTmpl, getEncBody(1), respSize1, respSize2)
+	msgErr := fmt.Appendf(nil, msgTmplErr, errCode)
 
 	messages := [][]byte{msg, msgErr}
 	err := app.callStream(context.Background(), m, messages)
@@ -350,7 +350,7 @@ func appCallBidiStreamError(t *testing.T, app *app, buf *bytes.Buffer) {
 		return strings.Repeat(userName, c)
 	}
 
-	msg := []byte(fmt.Sprintf(msgTmpl, getEncBody(1), respSize1, respSize2))
+	msg := fmt.Appendf(nil, msgTmpl, getEncBody(1), respSize1, respSize2)
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), app_testing.MethodExitCode, fmt.Sprintf("%d", errCode))
 	messages := [][]byte{msg, msg}
@@ -399,7 +399,7 @@ func appCallBidiStream(t *testing.T, app *app, buf *bytes.Buffer, methodName str
 		return strings.Repeat(userName, c)
 	}
 
-	msg := []byte(fmt.Sprintf(msgTmpl, getEncBody(1), respSize1, respSize2))
+	msg := fmt.Appendf(nil, msgTmpl, getEncBody(1), respSize1, respSize2)
 
 	messages := [][]byte{msg, msg}
 	err := app.callStream(context.Background(), m, messages)
@@ -613,7 +613,7 @@ func TestStatsHandler(t *testing.T) {
 }
 `
 
-	msg := []byte(fmt.Sprintf(msgTmpl, userId, userName))
+	msg := fmt.Appendf(nil, msgTmpl, userId, userName)
 
 	t.Run("checkStats", func(t *testing.T) {
 		checkStats(t, app, msg)
@@ -715,7 +715,7 @@ func TestAuthorityHeader(t *testing.T) {
 }
 `
 
-			msg := []byte(fmt.Sprintf(msgTmpl, userId, userName))
+			msg := fmt.Appendf(nil, msgTmpl, userId, userName)
 
 			ctx := metadata.AppendToOutgoingContext(context.Background(), app_testing.CheckHeader, ":authority="+tt.expectedAuthority)
 

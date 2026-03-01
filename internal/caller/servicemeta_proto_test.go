@@ -2,6 +2,7 @@ package caller
 
 import (
 	"context"
+	"slices"
 	"testing"
 )
 
@@ -125,11 +126,5 @@ func findSvc(services []*ServiceMeta, name string) *ServiceMeta {
 }
 
 func stringInArray(arr []string, s string) bool {
-	for i := range arr {
-		if arr[i] == s {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(arr, s)
 }
