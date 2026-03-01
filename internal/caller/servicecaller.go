@@ -14,9 +14,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/encoding/prototext"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
-
-	"github.com/jhump/protoreflect/desc"
 )
 
 // Proto message format
@@ -116,7 +115,7 @@ func NewServiceCaller(connFact *rpc.GrpcConnFactory, inMsgFormat, outMsgFormat M
 	}
 }
 
-func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, messages [][]byte, callOpts ...grpc.CallOption) (chan []byte, chan error) {
+func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, methodDesc protoreflect.MethodDescriptor, messages [][]byte, callOpts ...grpc.CallOption) (chan []byte, chan error) {
 	errChan := make(chan error, 1)
 	conn, err := sc.getConn(serviceTarget)
 	if err != nil {
@@ -125,13 +124,13 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 	}
 
 	sd := grpc.StreamDesc{
-		StreamName:    methodDesc.GetName(),
-		ServerStreams: methodDesc.IsServerStreaming(),
-		ClientStreams: methodDesc.IsClientStreaming(),
+		StreamName:    string(methodDesc.Name()),
+		ServerStreams: methodDesc.IsStreamingServer(),
+		ClientStreams: methodDesc.IsStreamingClient(),
 	}
 
 	// fully qualified method name is needed here
-	methodName := fmt.Sprintf("/%s/%s", methodDesc.GetService().GetFullyQualifiedName(), methodDesc.GetName())
+	methodName := fmt.Sprintf("/%s/%s", methodDesc.Parent().(protoreflect.ServiceDescriptor).FullName(), methodDesc.Name())
 	stream, err := conn.NewStream(ctx, &sd, methodName, callOpts...)
 	if err != nil {
 		errChan <- newCallerError(err)
@@ -143,7 +142,7 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 	go func() {
 		for {
 
-			m := dynamicpb.NewMessage(methodDesc.GetOutputType().UnwrapMessage())
+			m := dynamicpb.NewMessage(methodDesc.Output())
 			err := stream.RecvMsg(m)
 			if err != nil {
 				if err != io.EOF {
@@ -168,7 +167,7 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 
 	for _, reqMsg := range messages {
 
-		msg := dynamicpb.NewMessage(methodDesc.GetInputType().UnwrapMessage())
+		msg := dynamicpb.NewMessage(methodDesc.Input())
 		err := sc.unmarshalMessage(msg, reqMsg)
 		if err != nil {
 			errChan <- newCallerError(fmt.Errorf("invalid input %s: %w", sc.inMsgFormat.String(), err))
@@ -196,7 +195,7 @@ func (sc *ServiceCaller) CallStream(ctx context.Context, serviceTarget string, m
 }
 
 // CallClientStream allows calling unary or client stream methods as they both return only a single result
-func (sc *ServiceCaller) CallClientStream(ctx context.Context, serviceTarget string, methodDesc *desc.MethodDescriptor, messages [][]byte, callOpts ...grpc.CallOption) ([]byte, error) {
+func (sc *ServiceCaller) CallClientStream(ctx context.Context, serviceTarget string, methodDesc protoreflect.MethodDescriptor, messages [][]byte, callOpts ...grpc.CallOption) ([]byte, error) {
 	if len(messages) == 0 {
 		return nil, newCallerError(errors.New("empty requests are not allowed"))
 	}

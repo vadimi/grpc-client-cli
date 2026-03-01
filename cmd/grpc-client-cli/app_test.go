@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jhump/protoreflect/desc"
 	"github.com/spyzhov/ajson"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,6 +19,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func TestMain(m *testing.M) {
@@ -571,7 +571,7 @@ func jsonString(n *ajson.Node, jsonPath string) string {
 	return nodes[0].MustString()
 }
 
-func findMethod(t *testing.T, app *app, serviceName, methodName string) (*desc.MethodDescriptor, bool) {
+func findMethod(t *testing.T, app *app, serviceName, methodName string) (protoreflect.MethodDescriptor, bool) {
 	m, err := app.selectMethod(app.getService(serviceName), methodName)
 	if err != nil {
 		t.Error(err)

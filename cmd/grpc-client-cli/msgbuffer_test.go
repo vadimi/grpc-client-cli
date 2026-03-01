@@ -2,10 +2,8 @@ package main
 
 import (
 	"bytes"
-	"reflect"
 	"testing"
 
-	"github.com/jhump/protoreflect/desc"
 	"github.com/spyzhov/ajson"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"google.golang.org/grpc/interop/grpc_testing"
@@ -43,10 +41,7 @@ func TestProtoCmdMsgBuffer(t *testing.T) {
 		{nil, ErrInterruptTerm},
 	})
 
-	md, err := desc.LoadMessageDescriptorForType(reflect.TypeFor[*grpc_testing.SimpleRequest]())
-	if err != nil {
-		t.Fatal(err)
-	}
+	md := (*grpc_testing.SimpleRequest)(nil).ProtoReflect().Descriptor()
 
 	result := &bytes.Buffer{}
 	b := newMsgBuffer(&msgBufferOptions{
@@ -56,7 +51,7 @@ func TestProtoCmdMsgBuffer(t *testing.T) {
 		w:           result,
 	})
 
-	_, err = b.ReadMessage()
+	_, err := b.ReadMessage()
 	if err != nil && err != ErrInterruptTerm {
 		t.Fatal(err)
 	}
@@ -72,10 +67,7 @@ func TestHelpCmdMsgBuffer(t *testing.T) {
 		{nil, ErrInterruptTerm},
 	})
 
-	md, err := desc.LoadMessageDescriptorForType(reflect.TypeFor[*grpc_testing.SimpleRequest]())
-	if err != nil {
-		t.Fatal(err)
-	}
+	md := (*grpc_testing.SimpleRequest)(nil).ProtoReflect().Descriptor()
 
 	buf := &bytes.Buffer{}
 	b := newMsgBuffer(&msgBufferOptions{
@@ -85,7 +77,7 @@ func TestHelpCmdMsgBuffer(t *testing.T) {
 		w:           buf,
 	})
 
-	_, err = b.ReadMessage()
+	_, err := b.ReadMessage()
 	if err != nil && err != ErrInterruptTerm {
 		t.Fatal(err)
 	}
