@@ -30,8 +30,8 @@ func NewConnectionOpts(target string) (*ConnectionOptions, error) {
 		Metadata: map[string][]string{},
 	}
 
-	tokens := strings.Split(target, ",")
-	for _, token := range tokens {
+	tokens := strings.SplitSeq(target, ",")
+	for token := range tokens {
 		opt := strings.TrimSpace(token)
 		elements := strings.SplitN(opt, "=", 2)
 		if len(elements) > 1 {

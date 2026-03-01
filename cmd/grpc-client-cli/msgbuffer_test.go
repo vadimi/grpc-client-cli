@@ -43,8 +43,7 @@ func TestProtoCmdMsgBuffer(t *testing.T) {
 		{nil, ErrInterruptTerm},
 	})
 
-	req := &grpc_testing.SimpleRequest{}
-	md, err := desc.LoadMessageDescriptorForType(reflect.TypeOf(req))
+	md, err := desc.LoadMessageDescriptorForType(reflect.TypeFor[*grpc_testing.SimpleRequest]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,8 +72,7 @@ func TestHelpCmdMsgBuffer(t *testing.T) {
 		{nil, ErrInterruptTerm},
 	})
 
-	req := &grpc_testing.SimpleRequest{}
-	md, err := desc.LoadMessageDescriptorForType(reflect.TypeOf(req))
+	md, err := desc.LoadMessageDescriptorForType(reflect.TypeFor[*grpc_testing.SimpleRequest]())
 	if err != nil {
 		t.Fatal(err)
 	}

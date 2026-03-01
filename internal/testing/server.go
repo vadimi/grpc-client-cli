@@ -111,12 +111,12 @@ func (testService) StreamingOutputCall(req *grpc_testing.StreamingOutputCallRequ
 			return str.Context().Err()
 		}
 
-		buf := ""
+		var buf strings.Builder
 		for i := 0; i < int(param.GetSize()); i++ {
-			buf += req.GetUser().GetName()
+			buf.WriteString(req.GetUser().GetName())
 		}
 
-		rsp.User.Name = buf
+		rsp.User.Name = buf.String()
 
 		if err := str.Send(rsp); err != nil {
 			return err
@@ -175,12 +175,12 @@ func (testService) FullDuplexCall(str grpc_testing.TestService_FullDuplexCallSer
 				return str.Context().Err()
 			}
 
-			buf := ""
+			var buf strings.Builder
 			for i := 0; i < int(param.GetSize()); i++ {
-				buf += req.GetUser().GetName()
+				buf.WriteString(req.GetUser().GetName())
 			}
 
-			resp.User.Name = buf
+			resp.User.Name = buf.String()
 
 			if err := str.Send(resp); err != nil {
 				return err
@@ -211,12 +211,12 @@ func (testService) HalfDuplexCall(str grpc_testing.TestService_HalfDuplexCallSer
 				return str.Context().Err()
 			}
 
-			buf := ""
+			var buf strings.Builder
 			for i := 0; i < int(param.GetSize()); i++ {
-				buf += req.GetUser().GetName()
+				buf.WriteString(req.GetUser().GetName())
 			}
 
-			resp.User.Name = buf
+			resp.User.Name = buf.String()
 
 			if err := str.Send(resp); err != nil {
 				return err
