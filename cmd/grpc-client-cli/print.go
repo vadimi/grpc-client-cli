@@ -5,9 +5,21 @@ import (
 	"io"
 
 	"github.com/gookit/color"
+	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+func printFile(w io.Writer, f protoreflect.FileDescriptor) error {
+	wrappedFile, err := desc.WrapFile(f)
+	if err != nil {
+		return err
+	}
+	p := &protoprint.Printer{}
+	return p.PrintProtoFile(wrappedFile, w)
+}
 
 func printVerbose(w io.Writer, s *rpc.Stats, rpcErr error) {
 	fmt.Fprintln(w)

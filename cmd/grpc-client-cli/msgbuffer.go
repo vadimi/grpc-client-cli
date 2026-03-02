@@ -30,7 +30,7 @@ type msgBuffer struct {
 
 type msgBufferOptions struct {
 	reader      MsgReader
-	messageDesc *desc.MessageDescriptor
+	messageDesc protoreflect.MessageDescriptor
 	msgFormat   caller.MsgFormat
 	w           io.Writer
 }
@@ -43,7 +43,7 @@ func newMsgBuffer(opts *msgBufferOptions) *msgBuffer {
 	return &msgBuffer{
 		nextPrompt: "Next message (press Ctrl-D to finish): ",
 		opts:       opts,
-		fieldNames: fieldNames(opts.messageDesc.UnwrapMessage()),
+		fieldNames: fieldNames(opts.messageDesc),
 		helpText:   getMessageDefaults(opts.messageDesc),
 		protoText:  protoString(opts.messageDesc),
 		w:          w,
@@ -121,7 +121,7 @@ func (b *msgBuffer) validate(msg []byte) error {
 }
 
 func (b *msgBuffer) validateText(msgTxt []byte) error {
-	msg := dynamicpb.NewMessage(b.opts.messageDesc.UnwrapMessage())
+	msg := dynamicpb.NewMessage(b.opts.messageDesc)
 	return prototext.Unmarshal(msgTxt, msg)
 }
 
@@ -130,7 +130,7 @@ func (b *msgBuffer) validateJSON(msgJSON []byte) error {
 		return errors.New("syntax error: please provide valid json")
 	}
 
-	msg := dynamicpb.NewMessage(b.opts.messageDesc.UnwrapMessage())
+	msg := dynamicpb.NewMessage(b.opts.messageDesc)
 	err := protojson.Unmarshal(msgJSON, msg)
 	errFmt := "invalid message: %w"
 	if err == io.ErrUnexpectedEOF || err == io.EOF {
@@ -156,8 +156,8 @@ func fieldNames(messageDesc protoreflect.MessageDescriptor) []string {
 	return names
 }
 
-func getMessageDefaults(messageDesc *desc.MessageDescriptor) string {
-	msg := dynamicpb.NewMessage(messageDesc.UnwrapMessage())
+func getMessageDefaults(messageDesc protoreflect.MessageDescriptor) string {
+	msg := dynamicpb.NewMessage(messageDesc)
 	msgJSON, _ := protojson.MarshalOptions{
 		EmitDefaultValues: true,
 		UseProtoNames:     true,
@@ -166,11 +166,16 @@ func getMessageDefaults(messageDesc *desc.MessageDescriptor) string {
 	return string(msgJSON)
 }
 
-func protoString(messageDesc *desc.MessageDescriptor) string {
+func protoString(messageDesc protoreflect.MessageDescriptor) string {
+	wrappedDesc, err := desc.WrapMessage(messageDesc)
+	if err != nil {
+		return fmt.Sprintf("error wrapping descriptor: %v", err)
+	}
+
 	p := protoprint.Printer{
 		Compact: true,
 	}
-	str, err := p.PrintProtoToString(messageDesc)
+	str, err := p.PrintProtoToString(wrappedDesc)
 	if err != nil {
 		str = fmt.Sprintf("error printing proto: %v", err)
 	}

@@ -13,11 +13,10 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/jhump/protoreflect/desc"
-	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var errNoMethod = errors.New("no method")
@@ -189,18 +188,18 @@ func (a *app) Close() error {
 	return nil
 }
 
-func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
+func (a *app) callService(method protoreflect.MethodDescriptor, message []byte) error {
 	for {
 		buf := newMsgBuffer(&msgBufferOptions{
 			reader:      a.messageReader,
-			messageDesc: method.GetInputType(),
+			messageDesc: method.Input(),
 			msgFormat:   a.opts.InFormat,
 		})
 
 		var err error
 		var messages [][]byte
 		if len(message) == 0 {
-			if method.IsClientStreaming() {
+			if method.IsStreamingClient() {
 				messages, err = buf.ReadMessages()
 			} else {
 				var m []byte
@@ -208,7 +207,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 				messages = append(messages, m)
 			}
 		} else {
-			if method.IsClientStreaming() {
+			if method.IsStreamingClient() {
 				if a.opts.InFormat == caller.JSON {
 					messages, err = toJSONArray(message)
 				} else {
@@ -226,7 +225,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 
 		callTimeout := time.Duration(a.opts.Deadline) * time.Second
 		ctx, cancel := context.WithTimeout(rpc.WithStatsCtx(context.Background()), callTimeout)
-		if method.IsServerStreaming() {
+		if method.IsStreamingServer() {
 			err = a.callStream(ctx, method, messages)
 		} else {
 			err = a.callClientStream(ctx, method, messages)
@@ -254,7 +253,7 @@ func (a *app) callService(method *desc.MethodDescriptor, message []byte) error {
 }
 
 // callClientStream calls unary or client stream method
-func (a *app) callClientStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
+func (a *app) callClientStream(ctx context.Context, method protoreflect.MethodDescriptor, messageJSON [][]byte) error {
 	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.opts.OutJsonNames)
 
 	result, err := serviceCaller.CallClientStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
@@ -273,7 +272,7 @@ func (a *app) printResult(r []byte) {
 }
 
 // callStream calls both server or bi-directional stream methods
-func (a *app) callStream(ctx context.Context, method *desc.MethodDescriptor, messageJSON [][]byte) error {
+func (a *app) callStream(ctx context.Context, method protoreflect.MethodDescriptor, messageJSON [][]byte) error {
 	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.opts.OutJsonNames)
 	result, errChan := serviceCaller.CallStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
 
@@ -325,22 +324,21 @@ func (a *app) printService(name string) error {
 	normalizedName := strings.ToLower(name)
 	for _, s := range a.servicesList {
 		if normalizedName != "" && strings.Contains(strings.ToLower(s.Name), normalizedName) {
-			p := &protoprint.Printer{}
-			return p.PrintProtoFile(s.File, a.w)
+			return printFile(a.w, s.File)
 		}
 	}
 	return fmt.Errorf("service %s not found, cannot print", name)
 }
 
-func (a *app) selectMethod(s *caller.ServiceMeta, name string) (*desc.MethodDescriptor, error) {
+func (a *app) selectMethod(s *caller.ServiceMeta, name string) (protoreflect.MethodDescriptor, error) {
 	noMethod := "[..]"
 	methodNames := []string{noMethod}
 	for _, m := range s.Methods {
-		mn := m.GetName()
+		mn := string(m.Name())
 		if name != "" && strings.EqualFold(mn, name) {
 			return m, nil
 		}
-		methodNames = append(methodNames, m.GetName())
+		methodNames = append(methodNames, mn)
 	}
 
 	if !a.opts.IsInteractive {
@@ -364,7 +362,7 @@ func (a *app) selectMethod(s *caller.ServiceMeta, name string) (*desc.MethodDesc
 	}
 
 	for _, m := range s.Methods {
-		if m.GetName() == methodName {
+		if string(m.Name()) == methodName {
 			return m, nil
 		}
 	}

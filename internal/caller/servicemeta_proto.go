@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jhump/protoreflect/desc"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type serviceMetadataProto struct {
@@ -34,17 +34,24 @@ func (smp *serviceMetadataProto) GetServiceMetaDataList(ctx context.Context) (Se
 	res := []*ServiceMeta{}
 
 	for _, fd := range fileDesc {
-		for _, svc := range fd.GetServices() {
+		for i := 0; i < fd.Services().Len(); i++ {
+			svc := fd.Services().Get(i)
+
+			methods := make([]protoreflect.MethodDescriptor, svc.Methods().Len())
+			for j := 0; j < svc.Methods().Len(); j++ {
+				methods[j] = svc.Methods().Get(j)
+			}
+
 			svcData := &ServiceMeta{
-				File:    svc.GetFile(),
-				Name:    svc.GetFullyQualifiedName(),
-				Methods: svc.GetMethods(),
+				File:    fd,
+				Name:    string(svc.FullName()),
+				Methods: methods,
 			}
 
 			for _, m := range svcData.Methods {
 				u := newJsonNamesUpdater()
-				u.updateJSONNames(m.GetInputType().UnwrapMessage())
-				u.updateJSONNames(m.GetOutputType().UnwrapMessage())
+				u.updateJSONNames(m.Input())
+				u.updateJSONNames(m.Output())
 			}
 			res = append(res, svcData)
 		}
@@ -53,6 +60,6 @@ func (smp *serviceMetadataProto) GetServiceMetaDataList(ctx context.Context) (Se
 	return res, nil
 }
 
-func (smp *serviceMetadataProto) GetAdditionalFiles() ([]*desc.FileDescriptor, error) {
+func (smp *serviceMetadataProto) GetAdditionalFiles() ([]protoreflect.FileDescriptor, error) {
 	return smp.serviceMetaBase.GetAdditionalFiles(smp.protoImports)
 }

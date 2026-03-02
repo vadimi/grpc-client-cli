@@ -39,7 +39,7 @@ func TestMetaDataListSingleFile(t *testing.T) {
 			}
 
 			for i := range s.Methods {
-				mn := s.Methods[i].GetName()
+				mn := string(s.Methods[i].Name())
 				if !stringInArray(expectedMethods, mn) {
 					t.Errorf("unexpected method: %s", mn)
 				}
@@ -104,7 +104,7 @@ func TestMetaDataListMultipleFiles(t *testing.T) {
 				}
 
 				for i := range s.Methods {
-					mn := s.Methods[i].GetName()
+					mn := string(s.Methods[i].Name())
 					if !stringInArray(tt.expectedMethods, mn) {
 						t.Errorf("unexpected method: %s", mn)
 					}

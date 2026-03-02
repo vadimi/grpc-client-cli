@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
@@ -75,16 +75,22 @@ func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) (ServiceMe
 			}
 		}
 
+		svcPR := svcDesc.UnwrapService()
+		methods := make([]protoreflect.MethodDescriptor, svcPR.Methods().Len())
+		for j := 0; j < svcPR.Methods().Len(); j++ {
+			methods[j] = svcPR.Methods().Get(j)
+		}
+
 		svcData := &ServiceMeta{
-			File:    svcDesc.GetFile(),
-			Name:    svcDesc.GetFullyQualifiedName(),
-			Methods: svcDesc.GetMethods(),
+			File:    svcDesc.GetFile().UnwrapFile(),
+			Name:    string(svcPR.FullName()),
+			Methods: methods,
 		}
 
 		for _, m := range svcData.Methods {
 			u := newJsonNamesUpdater()
-			u.updateJSONNames(m.GetInputType().UnwrapMessage())
-			u.updateJSONNames(m.GetOutputType().UnwrapMessage())
+			u.updateJSONNames(m.Input())
+			u.updateJSONNames(m.Output())
 		}
 		res[i] = svcData
 	}
@@ -93,7 +99,7 @@ func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) (ServiceMe
 	return res, nil
 }
 
-func (s *serviceMetaData) GetAdditionalFiles() ([]*desc.FileDescriptor, error) {
+func (s *serviceMetaData) GetAdditionalFiles() ([]protoreflect.FileDescriptor, error) {
 	return s.serviceMetaBase.GetAdditionalFiles(s.protoImports)
 }
 

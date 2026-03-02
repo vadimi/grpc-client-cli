@@ -8,14 +8,14 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
 	clifs "github.com/vadimi/grpc-client-cli/internal/fs"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var errNoProtoFilesFound = errors.New("no proto files found")
 
-func parseProtoFiles(protoDirs []string, protoImports []string) ([]*desc.FileDescriptor, error) {
+func parseProtoFiles(protoDirs []string, protoImports []string) ([]protoreflect.FileDescriptor, error) {
 	protofiles, err := findProtoFiles(protoDirs)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,16 @@ func parseProtoFiles(protoDirs []string, protoImports []string) ([]*desc.FileDes
 		return nil, err
 	}
 
-	return p.ParseFiles(resolvedFiles...)
+	wrappedFDs, err := p.ParseFiles(resolvedFiles...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]protoreflect.FileDescriptor, len(wrappedFDs))
+	for i, fd := range wrappedFDs {
+		result[i] = fd.UnwrapFile()
+	}
+	return result, nil
 }
 
 func findProtoFiles(paths []string) ([]string, error) {

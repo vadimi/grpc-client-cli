@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jhump/protoreflect/desc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
@@ -18,19 +17,19 @@ func init() {
 
 type ServiceMetaData interface {
 	GetServiceMetaDataList(context.Context) (ServiceMetaList, error)
-	GetAdditionalFiles() ([]*desc.FileDescriptor, error)
+	GetAdditionalFiles() ([]protoreflect.FileDescriptor, error)
 }
 
 type ServiceMeta struct {
 	Name    string
-	Methods []*desc.MethodDescriptor
-	File    *desc.FileDescriptor
+	Methods []protoreflect.MethodDescriptor
+	File    protoreflect.FileDescriptor
 }
 
 type ServiceMetaList []*ServiceMeta
 
-func (l ServiceMetaList) Files() []*desc.FileDescriptor {
-	res := make([]*desc.FileDescriptor, len(l))
+func (l ServiceMetaList) Files() []protoreflect.FileDescriptor {
+	res := make([]protoreflect.FileDescriptor, len(l))
 	for i, m := range l {
 		res[i] = m.File
 	}
@@ -40,7 +39,7 @@ func (l ServiceMetaList) Files() []*desc.FileDescriptor {
 
 type serviceMetaBase struct{}
 
-func (s serviceMetaBase) GetAdditionalFiles(protoImports []string) ([]*desc.FileDescriptor, error) {
+func (s serviceMetaBase) GetAdditionalFiles(protoImports []string) ([]protoreflect.FileDescriptor, error) {
 	if len(protoImports) == 0 {
 		return nil, nil
 	}
@@ -54,13 +53,12 @@ func (s serviceMetaBase) GetAdditionalFiles(protoImports []string) ([]*desc.File
 	return fileDesc, nil
 }
 
-func RegisterFiles(fds ...*desc.FileDescriptor) error {
+func RegisterFiles(fds ...protoreflect.FileDescriptor) error {
 	errs := []error{}
 	for _, fd := range fds {
-		protoFile := fd.UnwrapFile()
-		_, err := protoregistry.GlobalFiles.FindFileByPath(protoFile.Path())
-		if errors.Is(err, protoregistry.NotFound) && shouldRegister(protoFile) {
-			if err := protoregistry.GlobalFiles.RegisterFile(protoFile); err != nil {
+		_, err := protoregistry.GlobalFiles.FindFileByPath(fd.Path())
+		if errors.Is(err, protoregistry.NotFound) && shouldRegister(fd) {
+			if err := protoregistry.GlobalFiles.RegisterFile(fd); err != nil {
 				errs = append(errs, err)
 			}
 		}
