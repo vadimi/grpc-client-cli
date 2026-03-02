@@ -50,6 +50,87 @@ Proto text format for input and output:
 grpc-client-cli --informat text --outformat text localhost:5050
 ```
 
+### TLS
+
+Connect using TLS:
+
+```
+grpc-client-cli --tls localhost:5050
+```
+
+Connect using TLS with a custom CA certificate:
+
+```
+grpc-client-cli --tls --cacert /path/to/ca.crt localhost:5050
+```
+
+Connect using mutual TLS (mTLS):
+
+```
+grpc-client-cli --tls --cert /path/to/client.crt --certkey /path/to/client.key localhost:5050
+```
+
+Skip server certificate verification (testing only):
+
+```
+grpc-client-cli --tls --insecure localhost:5050
+```
+
+### Headers
+
+Pass extra headers with `-H` (may be specified multiple times):
+
+```
+grpc-client-cli -H "authorization: Bearer token123" -H "x-request-id: abc" localhost:5050
+```
+
+### Deadline
+
+Set a custom call deadline (default is `15s`):
+
+```
+grpc-client-cli --deadline 30s localhost:5050
+grpc-client-cli -d 5m localhost:5050
+```
+
+### Keepalive
+
+Send keepalive pings with a custom interval:
+
+```
+grpc-client-cli --keepalive --keepalive-time 30s localhost:5050
+```
+
+### Max receive message size
+
+Override the default 4 MB receive message size limit:
+
+```
+grpc-client-cli --max-receive-message-size 16777216 localhost:5050
+```
+
+### JSON field names in output
+
+By default, response fields are printed using their original proto field names (e.g. `user_id`, `first_name`). Use `--out-json-names` to instead use the `json_name` option from the proto definition, which typically produces camelCase names (e.g. `userId`, `firstName`):
+
+```
+grpc-client-cli --out-json-names localhost:5050
+```
+
+### Reflection version
+
+By default `v1alpha` reflection is used. To let the tool detect the version automatically:
+
+```
+grpc-client-cli --reflect-version auto localhost:5050
+```
+
+To force `v1`:
+
+```
+grpc-client-cli --reflect-version v1 localhost:5050
+```
+
 ### Eureka Support
 
 grpc-client-cli provides integrated support for services published to a Eureka service registry.
