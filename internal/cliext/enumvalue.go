@@ -29,5 +29,5 @@ func (e EnumValue) String() string {
 }
 
 func (e *EnumValue) Get() any {
-	return e.selected
+	return e
 }
