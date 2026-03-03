@@ -10,7 +10,7 @@ require (
 	github.com/peterh/liner v1.2.2
 	github.com/spyzhov/ajson v0.9.6
 	github.com/stretchr/testify v1.11.1
-	github.com/urfave/cli/v3 v3.6.2
+	github.com/urfave/cli/v3 v3.7.0
 	golang.org/x/text v0.34.0
 	google.golang.org/grpc v1.79.1
 	google.golang.org/protobuf v1.36.11
