@@ -12,7 +12,7 @@ func TestMapValue(t *testing.T) {
 	require.NoError(t, mv.Set("a: b"))
 	require.NoError(t, mv.Set("c: d"))
 
-	res := ParseMapValue(mv)
+	res := ParseMapValue(mv.Get())
 
 	assert.Equal(t, []string{"b"}, res["a"])
 	assert.Equal(t, []string{"d"}, res["c"])
@@ -23,7 +23,7 @@ func TestMapValueMulti(t *testing.T) {
 	require.NoError(t, mv.Set("a: b"))
 	require.NoError(t, mv.Set("a: d"))
 
-	res := ParseMapValue(mv)
+	res := ParseMapValue(mv.Get())
 
 	assert.Equal(t, []string{"b", "d"}, res["a"])
 }
@@ -37,7 +37,7 @@ func TestMapValueSerialize(t *testing.T) {
 
 	require.NoError(t, mv.Set(serialied))
 
-	res := ParseMapValue(mv)
+	res := ParseMapValue(mv.Get())
 
 	assert.Equal(t, []string{"b"}, res["a"])
 	assert.Equal(t, []string{"d"}, res["c"])

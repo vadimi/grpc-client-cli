@@ -73,7 +73,7 @@ func (mv MapValue) String() string {
 }
 
 func (mv *MapValue) Get() any {
-	return mv.m
+	return mv
 }
 
 // ParseMapValue returns map from the interface object
