@@ -15,7 +15,8 @@ builds:
       - -s -w
 
 archives:
-  - format: tar.gz
+  - formats:
+      - tar.gz
     name_template: >-
       {{ .ProjectName }}_
       {{- tolower .Os }}_
@@ -26,4 +27,5 @@ archives:
     - none* # binaries only
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
