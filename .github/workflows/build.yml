@@ -27,6 +27,12 @@ jobs:
           curl -L https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz | sudo tar -C /usr/local/bin -xz
           gotestsum --format short-verbose --no-summary=skipped ./...
 
+      - name: check vulnerabilities
+        run: |
+          set -o pipefail
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
       - name: build
         uses: goreleaser/goreleaser-action@v6
         with:
