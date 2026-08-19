@@ -18,17 +18,17 @@ type Stats struct {
 	respTrailers metadata.MD
 	fullMethod   string
 	Duration     time.Duration
-	respSize     int64
-	reqSize      int64
+	respSize     atomic.Int64
+	reqSize      atomic.Int64
 	sync.RWMutex
 }
 
 func (s *Stats) RespSize() int64 {
-	return atomic.LoadInt64(&s.respSize)
+	return s.respSize.Load()
 }
 
 func (s *Stats) ReqSize() int64 {
-	return atomic.LoadInt64(&s.reqSize)
+	return s.reqSize.Load()
 }
 
 func (s *Stats) ReqHeaders() metadata.MD {
@@ -61,13 +61,13 @@ func (s *Stats) record(rpcStats stats.RPCStats) {
 	switch v := rpcStats.(type) {
 	case *stats.InHeader:
 		s.Lock()
-		atomic.AddInt64(&s.respSize, int64(v.WireLength))
+		s.respSize.Add(int64(v.WireLength))
 		s.respHeaders = v.Header.Copy()
 		s.Unlock()
 	case *stats.InPayload:
-		atomic.AddInt64(&s.respSize, int64(v.WireLength))
+		s.respSize.Add(int64(v.WireLength))
 	case *stats.InTrailer:
-		atomic.AddInt64(&s.respSize, int64(v.WireLength))
+		s.respSize.Add(int64(v.WireLength))
 		s.Lock()
 		s.respTrailers = v.Trailer.Copy()
 		s.Unlock()
@@ -78,7 +78,7 @@ func (s *Stats) record(rpcStats stats.RPCStats) {
 		s.fullMethod = v.FullMethod
 		s.Unlock()
 	case *stats.OutPayload:
-		atomic.AddInt64(&s.reqSize, int64(v.WireLength))
+		s.reqSize.Add(int64(v.WireLength))
 	case *stats.End:
 		s.Duration = v.EndTime.Sub(v.BeginTime)
 	}
