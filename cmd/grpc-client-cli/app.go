@@ -8,26 +8,22 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 	"strings"
 	"time"
 
-	"github.com/AlecAivazis/survey/v2"
+	grpcapp "github.com/vadimi/grpc-client-cli/internal/app"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-var errNoMethod = errors.New("no method")
-
 type app struct {
-	connFact      *rpc.GrpcConnFactory
-	servicesList  []*caller.ServiceMeta
-	messageReader *msgReader
-	opts          *startOpts
-	w             io.Writer
-	printer       resultPrinter
+	connFact     *rpc.GrpcConnFactory
+	servicesList caller.ServiceMetaList
+	exec         grpcapp.CallExecutor
+	printer      grpcapp.ResultPrinter
+	opts         *startOpts
+	w            io.Writer
 }
 
 type startOpts struct {
@@ -91,7 +87,8 @@ func newApp(opts *startOpts) (*app, error) {
 		a.w = os.Stdout
 	}
 
-	a.printer = newResultPrinter(a.w, opts.OutFormat)
+	a.exec = grpcapp.NewCallExecutor(a.connFact, opts.Target, opts.InFormat, opts.OutFormat, opts.OutJsonNames)
+	a.printer = grpcapp.NewResultPrinter(a.w, opts.OutFormat)
 
 	var svc caller.ServiceMetaData
 	if len(opts.Protos) > 0 {
@@ -110,7 +107,7 @@ func newApp(opts *startOpts) (*app, error) {
 	services, err := svc.GetServiceMetaDataList(ctx)
 	if err != nil {
 		if a.opts.Verbose {
-			printVerbose(a.w, rpc.ExtractRpcStats(ctx), err)
+			grpcapp.PrintVerbose(a.w, rpc.ExtractRpcStats(ctx), err)
 		}
 		return nil, err
 	}
@@ -127,247 +124,148 @@ func newApp(opts *startOpts) (*app, error) {
 
 	a.servicesList = services
 
-	rl, err := newMsgReader(&msgReaderSettings{
-		Prompt:      fmt.Sprintf("Message %s (type ? to see defaults): ", a.opts.InFormat.String()),
-		HistoryFile: os.TempDir() + "/grpc-client-cli.tmp",
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	a.messageReader = rl
-
 	return a, nil
 }
 
+// Start runs the application: the interactive terminal ui when no message
+// was provided, a single call otherwise.
 func (a *app) Start(message []byte) error {
-	for {
-		service, err := a.selectService(a.opts.Service)
-		if err != nil {
-			return err
-		}
-
-		if a.opts.Discover {
-			return a.printService(service)
-		}
-
-		for {
-			method, err := a.selectMethod(a.getService(service), a.opts.Method)
-			if err != nil {
-				// if [..] is selected then go back to service selection
-				if err == errNoMethod {
-					break
-				}
-				return err
-			}
-
-			err = a.callService(method, message)
-			// Ctrl+D will trigger io.EOF if the line is empty
-			// go back to method selection
-			if err != io.EOF {
-				return err
-			}
-		}
+	if a.opts.IsInteractive {
+		return a.startInteractive()
 	}
+
+	return a.startOnce(message)
 }
 
-func (a *app) Close() error {
-	cerr := a.connFact.Close()
-	if a.messageReader == nil {
-		return cerr
+// startInteractive runs the whole interactive session as a bubbletea
+// application.
+func (a *app) startInteractive() error {
+	cfg := &grpcapp.Config{
+		Services:  a.servicesList,
+		Executor:  a.exec,
+		Service:   a.opts.Service,
+		Method:    a.opts.Method,
+		Deadline:  a.opts.Deadline,
+		Verbose:   a.opts.Verbose,
+		InFormat:  a.opts.InFormat,
+		OutFormat: a.opts.OutFormat,
+		Discover:  a.opts.Discover,
 	}
 
-	if merr := a.messageReader.Close(); merr != nil {
-		if cerr == nil {
-			return merr
+	res, err := grpcapp.Run(cfg)
+	if err != nil {
+		if errors.Is(err, grpcapp.ErrInterrupted) {
+			// the user quit the session with ctrl+c
+			return nil
 		}
+		return err
+	}
 
-		return errors.New(cerr.Error() + "; " + merr.Error())
+	if a.opts.Discover {
+		return a.printService(res.Service)
 	}
 
 	return nil
 }
 
-func (a *app) callService(method protoreflect.MethodDescriptor, message []byte) error {
-	for {
-		buf := newMsgBuffer(&msgBufferOptions{
-			reader:      a.messageReader,
-			messageDesc: method.Input(),
-			msgFormat:   a.opts.InFormat,
-		})
-
-		var err error
-		var messages [][]byte
-		if len(message) == 0 {
-			if method.IsStreamingClient() {
-				messages, err = buf.ReadMessages()
-			} else {
-				var m []byte
-				m, err = buf.ReadMessage()
-				messages = append(messages, m)
-			}
-		} else {
-			if method.IsStreamingClient() {
-				if a.opts.InFormat == caller.JSON {
-					messages, err = toJSONArray(message)
-				} else {
-					// TODO: parse text format array
-					messages = append(messages, message)
-				}
-			} else {
-				messages = append(messages, message)
-			}
-		}
-
-		if err != nil {
-			return err
-		}
-
-		callTimeout := time.Duration(a.opts.Deadline) * time.Second
-		ctx, cancel := context.WithTimeout(rpc.WithStatsCtx(context.Background()), callTimeout)
-		if method.IsStreamingServer() {
-			err = a.callStream(ctx, method, messages)
-		} else {
-			err = a.callClientStream(ctx, method, messages)
-		}
-
-		if err != nil {
-			if !caller.IsErrTransient(err) {
-				cancel()
-				return err
-			}
-			fmt.Printf("Error: %s\n", err)
-		}
-
-		if a.opts.Verbose {
-			printVerbose(a.w, rpc.ExtractRpcStats(ctx), errors.Unwrap(err))
-		}
-
-		// if we pass a single message, return
-		if len(message) > 0 {
-			cancel()
-			return nil
-		}
-		cancel()
-	}
-}
-
-// callClientStream calls unary or client stream method
-func (a *app) callClientStream(ctx context.Context, method protoreflect.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.opts.OutJsonNames)
-
-	result, err := serviceCaller.CallClientStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
+// startOnce resolves the requested service and method by name and performs
+// a single call with the provided message.
+func (a *app) startOnce(message []byte) error {
+	service, err := grpcapp.ResolveService(a.servicesList, a.opts.Service)
 	if err != nil {
 		return err
 	}
 
-	a.printResult(result)
+	if a.opts.Discover {
+		return a.printService(service)
+	}
+
+	method, err := grpcapp.ResolveMethod(a.getService(service), a.opts.Method)
+	if err != nil {
+		return err
+	}
+
+	return a.callService(method, message)
+}
+
+func (a *app) Close() error {
+	return a.connFact.Close()
+}
+
+// callService performs a single call with a message from a file or stdin.
+func (a *app) callService(method protoreflect.MethodDescriptor, message []byte) error {
+	var messages [][]byte
+	var err error
+	if method.IsStreamingClient() {
+		if a.opts.InFormat == caller.JSON {
+			messages, err = toJSONArray(message)
+		} else {
+			// TODO: parse text format array
+			messages = append(messages, message)
+		}
+	} else {
+		messages = append(messages, message)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	callTimeout := time.Duration(a.opts.Deadline) * time.Second
+	ctx, cancel := context.WithTimeout(rpc.WithStatsCtx(context.Background()), callTimeout)
+	defer cancel()
+
+	if method.IsStreamingServer() {
+		err = a.callStream(ctx, method, messages)
+	} else {
+		err = a.callClientStream(ctx, method, messages)
+	}
+
+	if err != nil {
+		if !caller.IsErrTransient(err) {
+			return err
+		}
+		fmt.Printf("Error: %s\n", err)
+	}
+
+	if a.opts.Verbose {
+		grpcapp.PrintVerbose(a.w, rpc.ExtractRpcStats(ctx), errors.Unwrap(err))
+	}
+
+	// the message was provided, so the call is done
+	return nil
+}
+
+// callClientStream calls unary or client stream method
+func (a *app) callClientStream(ctx context.Context, method protoreflect.MethodDescriptor, messageJSON [][]byte) error {
+	result, err := a.exec.CallUnary(ctx, method, messageJSON)
+	if err != nil {
+		return err
+	}
+
+	a.printer.WriteSingle(result)
 
 	return nil
 }
 
-func (a *app) printResult(r []byte) {
-	a.printer.WriteMessage(r)
-	fmt.Fprintln(a.w)
-}
-
 // callStream calls both server or bi-directional stream methods
 func (a *app) callStream(ctx context.Context, method protoreflect.MethodDescriptor, messageJSON [][]byte) error {
-	serviceCaller := caller.NewServiceCaller(a.connFact, a.opts.InFormat, a.opts.OutFormat, a.opts.OutJsonNames)
-	result, errChan := serviceCaller.CallStream(ctx, a.opts.Target, method, messageJSON, grpc.WaitForReady(true))
+	sp := grpcapp.NewStreamPrinter(a.printer)
+	sp.Begin()
+	err := a.exec.CallStreaming(ctx, method, messageJSON, sp.Add)
+	sp.End()
 
-	a.printer.BeginArray()
-	next := false
-	for {
-		select {
-		case r := <-result:
-			if r != nil {
-				if next {
-					a.printer.ArrayDelim()
-				}
-				a.printer.WriteMessage(r)
-				next = true
-			}
-		case err := <-errChan:
-			a.printer.EndArray()
-			return err
-		}
-	}
-}
-
-func (a *app) selectService(name string) (string, error) {
-	serviceNames := []string{}
-	normalizedName := strings.ToLower(name)
-	for _, s := range a.servicesList {
-		if normalizedName != "" && strings.Contains(strings.ToLower(s.Name), normalizedName) {
-			return s.Name, nil
-		}
-		serviceNames = append(serviceNames, s.Name)
-	}
-
-	if !a.opts.IsInteractive {
-		return "", errors.New("service name not found or invalid")
-	}
-
-	// ascending sort for service names
-	sort.Slice(serviceNames, func(i, j int) bool { return strings.ToLower(serviceNames[i]) < strings.ToLower(serviceNames[j]) })
-	service := ""
-	err := survey.AskOne(&survey.Select{
-		Message:  "Choose a service:",
-		Options:  serviceNames,
-		PageSize: 20,
-	}, &service, survey.WithValidator(survey.Required), surveyIcons())
-	return service, err
+	return err
 }
 
 func (a *app) printService(name string) error {
 	normalizedName := strings.ToLower(name)
 	for _, s := range a.servicesList {
 		if normalizedName != "" && strings.Contains(strings.ToLower(s.Name), normalizedName) {
-			return printFile(a.w, s.File)
+			return grpcapp.PrintFile(a.w, s.File)
 		}
 	}
 	return fmt.Errorf("service %s not found, cannot print", name)
-}
-
-func (a *app) selectMethod(s *caller.ServiceMeta, name string) (protoreflect.MethodDescriptor, error) {
-	noMethod := "[..]"
-	methodNames := []string{noMethod}
-	for _, m := range s.Methods {
-		mn := string(m.Name())
-		if name != "" && strings.EqualFold(mn, name) {
-			return m, nil
-		}
-		methodNames = append(methodNames, mn)
-	}
-
-	if !a.opts.IsInteractive {
-		return nil, errors.New("method name not found or invalid")
-	}
-
-	// ascending sort for method names
-	sort.Slice(methodNames, func(i, j int) bool { return strings.ToLower(methodNames[i]) < strings.ToLower(methodNames[j]) })
-	methodName := ""
-	err := survey.AskOne(&survey.Select{
-		Message:  "Choose a method:",
-		Options:  methodNames,
-		PageSize: 20,
-	}, &methodName, survey.WithValidator(survey.Required), surveyIcons())
-	if err != nil {
-		return nil, err
-	}
-
-	if methodName == noMethod {
-		return nil, errNoMethod
-	}
-
-	for _, m := range s.Methods {
-		if string(m.Name()) == methodName {
-			return m, nil
-		}
-	}
-
-	return nil, errors.New("method not found")
 }
 
 func (a *app) getService(serviceName string) *caller.ServiceMeta {
@@ -404,10 +302,4 @@ func toJSONArray(msg []byte) ([][]byte, error) {
 	}
 
 	return result, nil
-}
-
-func surveyIcons() survey.AskOpt {
-	return survey.WithIcons(func(icons *survey.IconSet) {
-		icons.SelectFocus.Text = "→"
-	})
 }

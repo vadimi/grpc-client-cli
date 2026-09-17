@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/urfave/cli/v3"
+	grpcapp "github.com/vadimi/grpc-client-cli/internal/app"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/cliext"
 	"github.com/vadimi/grpc-client-cli/internal/fs"
@@ -269,7 +269,7 @@ func runApp(_ context.Context, cmd *cli.Command, opts *startOpts) (e error) {
 
 	err = a.Start(message)
 
-	if err != nil && err != terminal.InterruptErr && err != ErrInterruptTerm {
+	if err != nil && !errors.Is(err, grpcapp.ErrInterrupted) {
 		return err
 	}
 

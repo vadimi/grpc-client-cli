@@ -13,6 +13,7 @@ import (
 	"github.com/spyzhov/ajson"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	grpcapp "github.com/vadimi/grpc-client-cli/internal/app"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
@@ -572,7 +573,7 @@ func jsonString(n *ajson.Node, jsonPath string) string {
 }
 
 func findMethod(t *testing.T, app *app, serviceName, methodName string) (protoreflect.MethodDescriptor, bool) {
-	m, err := app.selectMethod(app.getService(serviceName), methodName)
+	m, err := grpcapp.ResolveMethod(app.getService(serviceName), methodName)
 	if err != nil {
 		t.Error(err)
 		return nil, false
