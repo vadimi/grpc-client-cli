@@ -1,6 +1,7 @@
 package caller
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -8,7 +9,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/jhump/protoreflect/desc/protoparse"
+	"github.com/bufbuild/protocompile"
 	clifs "github.com/vadimi/grpc-client-cli/internal/fs"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -37,26 +38,33 @@ func parseProtoFiles(protoDirs []string, protoImports []string) ([]protoreflect.
 	// additional directories to look for dependencies
 	importPaths = append(importPaths, protoImports...)
 
-	p := protoparse.Parser{
+	resolvedFiles, err := resolveFilenames(importPaths, protofiles...)
+	if err != nil {
+		return nil, err
+	}
+
+	resolver := protocompile.WithStandardImports(&protocompile.SourceResolver{
 		ImportPaths: importPaths,
 		Accessor: func(filename string) (io.ReadCloser, error) {
 			return clifs.NewFileReader(filename)
 		},
+	})
+
+	// MaxParallelism 1 and no source info match protoparse defaults
+	c := protocompile.Compiler{
+		Resolver:       resolver,
+		MaxParallelism: 1,
+		SourceInfoMode: protocompile.SourceInfoNone,
 	}
 
-	resolvedFiles, err := protoparse.ResolveFilenames(importPaths, protofiles...)
+	files, err := c.Compile(context.Background(), resolvedFiles...)
 	if err != nil {
 		return nil, err
 	}
 
-	wrappedFDs, err := p.ParseFiles(resolvedFiles...)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]protoreflect.FileDescriptor, len(wrappedFDs))
-	for i, fd := range wrappedFDs {
-		result[i] = fd.UnwrapFile()
+	result := make([]protoreflect.FileDescriptor, len(files))
+	for i, fd := range files {
+		result[i] = fd
 	}
 	return result, nil
 }

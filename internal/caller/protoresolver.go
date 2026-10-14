@@ -3,19 +3,18 @@ package caller
 import (
 	"errors"
 
-	"github.com/jhump/protoreflect/desc"
-	"github.com/jhump/protoreflect/desc/builder"
+	"github.com/jhump/protoreflect/v2/protobuilder"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/runtime/protoiface"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
-var customAnyDescr *desc.MessageDescriptor
+var customAnyDescr protoreflect.MessageDescriptor
 
 func init() {
-	md, err := builder.NewMessage("any").
-		AddField(builder.NewField("err", builder.FieldTypeString())).
+	md, err := protobuilder.NewMessage("any").
+		AddField(protobuilder.NewField("err", protobuilder.FieldTypeString())).
 		Build()
 	if err != nil {
 		panic(err)
@@ -37,7 +36,7 @@ func (t *protoResolver) FindMessageByURL(url string) (protoreflect.MessageType, 
 	mt, err := t.Types.FindMessageByURL(url)
 	if err != nil {
 		if errors.Is(err, protoregistry.NotFound) {
-			msg := dynamicpb.NewMessage(customAnyDescr.UnwrapMessage())
+			msg := dynamicpb.NewMessage(customAnyDescr)
 			return &unknownMsgType{msg}, nil
 		}
 		return mt, err

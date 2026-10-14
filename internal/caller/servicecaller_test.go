@@ -5,8 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jhump/protoreflect/desc"
-	"github.com/jhump/protoreflect/desc/builder"
+	"github.com/jhump/protoreflect/v2/protobuilder"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vadimi/grpc-client-cli/internal/testing/grpc_testing"
@@ -16,13 +15,13 @@ import (
 )
 
 func TestMarshalJSON(t *testing.T) {
-	md, err := builder.NewMessage("any").
-		AddField(builder.NewField("id", builder.FieldTypeInt32())).
-		AddField(builder.NewField("name", builder.FieldTypeString())).
+	md, err := protobuilder.NewMessage("any").
+		AddField(protobuilder.NewField("id", protobuilder.FieldTypeInt32())).
+		AddField(protobuilder.NewField("name", protobuilder.FieldTypeString())).
 		Build()
 	require.NoError(t, err, "error building new message descriptor")
 
-	m := dynamicpb.NewMessage(md.UnwrapMessage())
+	m := dynamicpb.NewMessage(md)
 	idField := m.Descriptor().Fields().ByName("id")
 	m.Set(idField, protoreflect.ValueOfInt32(1))
 	nameField := m.Descriptor().Fields().ByName("name")
@@ -66,12 +65,11 @@ func TestMarshalText(t *testing.T) {
 }
 
 func TestMarshalJSON_AnyNotFound(t *testing.T) {
-	mdAny, err := desc.LoadMessageDescriptorForMessage((*anypb.Any)(nil))
-	require.NoError(t, err, "failed to load Any message descriptor")
-	md, err := builder.NewMessage("any").
-		AddField(builder.NewField("id", builder.FieldTypeInt32())).
-		AddField(builder.NewField("name", builder.FieldTypeString())).
-		AddField(builder.NewField("a", builder.FieldTypeImportedMessage(mdAny))).
+	mdAny := (*anypb.Any)(nil).ProtoReflect().Descriptor()
+	md, err := protobuilder.NewMessage("any").
+		AddField(protobuilder.NewField("id", protobuilder.FieldTypeInt32())).
+		AddField(protobuilder.NewField("name", protobuilder.FieldTypeString())).
+		AddField(protobuilder.NewField("a", protobuilder.FieldTypeImportedMessage(mdAny))).
 		Build()
 	require.NoError(t, err, "error building new message descriptor")
 
@@ -79,7 +77,7 @@ func TestMarshalJSON_AnyNotFound(t *testing.T) {
 		TypeUrl: "test.protobuf.DoesNotExist",
 		Value:   []byte("MTIz"),
 	}
-	m := dynamicpb.NewMessage(md.UnwrapMessage())
+	m := dynamicpb.NewMessage(md)
 	m.Set(m.Descriptor().Fields().ByName("id"), protoreflect.ValueOf(int32(1)))
 	m.Set(m.Descriptor().Fields().ByName("name"), protoreflect.ValueOf("test"))
 	m.Set(m.Descriptor().Fields().ByName("a"), protoreflect.ValueOfMessage(aValue.ProtoReflect()))

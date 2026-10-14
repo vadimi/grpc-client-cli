@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jhump/protoreflect/grpcreflect"
+	"github.com/jhump/protoreflect/v2/grpcreflect"
 	"github.com/stretchr/testify/require"
 	app_testing "github.com/vadimi/grpc-client-cli/internal/testing"
 )
@@ -48,16 +48,20 @@ func TestDiscoverCommand(t *testing.T) {
 
 	testSvc, ok := services["grpc_client_cli.testing.TestService"]
 	require.True(t, ok, "grpc service not found")
-	for _, m := range testSvc.GetMethods() {
-		if !strings.Contains(res, "rpc "+m.GetName()) {
-			t.Errorf("expected %s method def, got %s", m.GetName(), res)
+	methods := testSvc.Methods()
+	for i := range methods.Len() {
+		m := methods.Get(i)
+		if !strings.Contains(res, "rpc "+string(m.Name())) {
+			t.Errorf("expected %s method def, got %s", m.Name(), res)
 			return
 		}
 	}
 
-	for _, msg := range testSvc.GetFile().GetMessageTypes() {
-		if !strings.Contains(res, "message "+msg.GetName()) {
-			t.Errorf("expected %s message def, got %s", msg.GetName(), res)
+	msgs := testSvc.ParentFile().Messages()
+	for i := range msgs.Len() {
+		msg := msgs.Get(i)
+		if !strings.Contains(res, "message "+string(msg.Name())) {
+			t.Errorf("expected %s message def, got %s", msg.Name(), res)
 			return
 		}
 	}
