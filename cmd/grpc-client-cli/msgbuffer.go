@@ -9,8 +9,7 @@ import (
 	"os"
 	"slices"
 
-	"github.com/jhump/protoreflect/desc"
-	"github.com/jhump/protoreflect/desc/protoprint"
+	"github.com/jhump/protoreflect/v2/protoprint"
 	"github.com/vadimi/grpc-client-cli/internal/caller"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/encoding/prototext"
@@ -167,15 +166,10 @@ func getMessageDefaults(messageDesc protoreflect.MessageDescriptor) string {
 }
 
 func protoString(messageDesc protoreflect.MessageDescriptor) string {
-	wrappedDesc, err := desc.WrapMessage(messageDesc)
-	if err != nil {
-		return fmt.Sprintf("error wrapping descriptor: %v", err)
-	}
-
 	p := protoprint.Printer{
 		Compact: true,
 	}
-	str, err := p.PrintProtoToString(wrappedDesc)
+	str, err := p.PrintProtoToString(messageDesc)
 	if err != nil {
 		str = fmt.Sprintf("error printing proto: %v", err)
 	}
