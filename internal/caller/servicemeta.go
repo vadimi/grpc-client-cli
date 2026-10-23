@@ -2,9 +2,11 @@ package caller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/jhump/protoreflect/grpcreflect"
+	"github.com/jhump/protoreflect/v2/grpcreflect"
+	"github.com/jhump/protoreflect/v2/protoresolve"
 	"github.com/vadimi/grpc-client-cli/internal/rpc"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -58,7 +60,7 @@ func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) (ServiceMe
 
 	res := make([]*ServiceMeta, len(services))
 	for i, svc := range services {
-		svcDesc, err := rc.ResolveService(svc)
+		svcDesc, err := resolveService(rc, svc)
 		// sometimes ResolveService throws an error
 		// when different proto files have different dependency protos named identically
 		// For example service1.proto has common_types.proto and service2.proto has the same dependency
@@ -68,22 +70,21 @@ func (s *serviceMetaData) GetServiceMetaDataList(ctx context.Context) (ServiceMe
 			rc.Reset()
 			// try only once here
 			rc = s.grpcReflectClient(callctx, conn)
-			svcDesc, err = rc.ResolveService(svc)
+			svcDesc, err = resolveService(rc, svc)
 			if err != nil {
 				defer rc.Reset()
 				return nil, err
 			}
 		}
 
-		svcPR := svcDesc.UnwrapService()
-		methods := make([]protoreflect.MethodDescriptor, svcPR.Methods().Len())
-		for j := 0; j < svcPR.Methods().Len(); j++ {
-			methods[j] = svcPR.Methods().Get(j)
+		methods := make([]protoreflect.MethodDescriptor, svcDesc.Methods().Len())
+		for j := range svcDesc.Methods().Len() {
+			methods[j] = svcDesc.Methods().Get(j)
 		}
 
 		svcData := &ServiceMeta{
-			File:    svcDesc.GetFile().UnwrapFile(),
-			Name:    string(svcPR.FullName()),
+			File:    svcDesc.ParentFile(),
+			Name:    string(svcDesc.FullName()),
 			Methods: methods,
 		}
 
@@ -109,4 +110,25 @@ func (s *serviceMetaData) grpcReflectClient(ctx context.Context, conn grpc.Clien
 	}
 	rpbclient := rpb.NewServerReflectionClient(conn)
 	return grpcreflect.NewClientV1Alpha(ctx, rpbclient)
+}
+
+// resolveService resolves a service descriptor by its full name,
+// a replacement for protoreflect v1 grpcreflect.Client.ResolveService
+func resolveService(rc *grpcreflect.Client, svc protoreflect.FullName) (protoreflect.ServiceDescriptor, error) {
+	fd, err := rc.FileContainingSymbol(svc)
+	if err != nil {
+		return nil, err
+	}
+
+	dsc := protoresolve.FindDescriptorByNameInFile(fd, svc)
+	if dsc == nil {
+		return nil, fmt.Errorf("service %q not found", svc)
+	}
+
+	svcDesc, ok := dsc.(protoreflect.ServiceDescriptor)
+	if !ok {
+		return nil, fmt.Errorf("%q is not a service", svc)
+	}
+
+	return svcDesc, nil
 }
